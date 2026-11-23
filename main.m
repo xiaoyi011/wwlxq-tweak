@@ -442,7 +442,7 @@ static void awj_build_ui(void) {
 
     CGFloat sw = sc.coordinateSpace.bounds.size.width;
     UIButton* ball = [UIButton buttonWithType:UIButtonTypeSystem];
-    ball.frame = CGRectMake(sw - 74, 120, 58, 58);
+    ball.frame = CGRectMake(sw - 74, 240, 58, 58);
     ball.backgroundColor = [UIColor colorWithRed:0.1 green:0.55 blue:1 alpha:0.9];
     [ball setTitle:@"GM" forState:UIControlStateNormal];
     [ball setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
