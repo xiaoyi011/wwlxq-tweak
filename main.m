@@ -966,7 +966,7 @@ static void awj_toggle_panel(void) {
         if (i == GM_BTN_COUNT - 1) {
             UIButton* hint = [UIButton buttonWithType:UIButtonTypeSystem];
             hint.userInteractionEnabled = NO;
-            hint.backgroundColor = [UIColor colorWithWhite:0.16 alpha:0.9];
+            hint.backgroundColor = awj_off_color();
             [hint setTitle:@"音量上打开 / 音量下隐藏" forState:UIControlStateNormal];
             [hint setTitleColor:[UIColor colorWithWhite:0.7 alpha:1] forState:UIControlStateNormal];
             hint.layer.cornerRadius = 8;
