@@ -26,7 +26,6 @@ static void awj_build_ui(void);
 static void gm_call2(int idx, int quiet);
 static void lic_activate_dialog(UIViewController* vc, void (^done)(BOOL, NSString*));
 
-static volatile float g_spd_saved = 0;  // 记忆的加速倍率（>1 时自动应用）
 static volatile int g_t_sp  = 0;   // 无限银币/SP（持续，按钮 0）
 static volatile int g_t_inv = 0;   // 无敌（持续，按钮 1）
 
@@ -456,8 +455,6 @@ static void* auto_thread(void* arg) {
         }
         if (tick % 4 == 0) {                         // 每 2 秒
             if (g_t_inv) run_on_main(^{ gm_call2(1, 1); });   // 无敌
-            if (g_spd_saved > 1.01f && g_ls_field)
-                run_on_main(^{ do_set_speed(g_spd_saved); }); // 自动恢复记忆的加速
         }
         usleep(500000);
     }
@@ -968,7 +965,6 @@ static void awj_toggle_panel(void) {
         spdSlider.value = v;
         spdLabel.text = [NSString stringWithFormat:@"加速: %.0fx", v];
         [[NSUserDefaults standardUserDefaults] setFloat:v forKey:@"awj_speed"];
-        g_spd_saved = v;
         run_on_main(^{ do_set_speed(v); });
     }] forControlEvents:UIControlEventValueChanged];
     [spdSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
@@ -1187,8 +1183,6 @@ __attribute__((constructor))
 static void awj_init(void) {
     const char* home = getenv("HOME");
     LOG("loaded pid=%d home=%s", getpid(), home ? home : "?");
-    float spd0 = [[NSUserDefaults standardUserDefaults] floatForKey:@"awj_speed"];
-    if (spd0 >= 1.0f && spd0 <= 10.0f) g_spd_saved = spd0;
     lic_check();
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
         usleep(12 * 1000000);
