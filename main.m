@@ -538,6 +538,87 @@ static UIImage* awj_thumb(void) {
     return img;
 }
 
+// ---------------- 卡密 ----------------
+static int g_lic_ok = 0;
+static NSString* g_lic_exp = nil;
+
+static NSString* awj_device_id(void) {
+    NSUserDefaults* d = [NSUserDefaults standardUserDefaults];
+    NSString* s = [d stringForKey:@"awj_device_id"];
+    if (s.length == 0) {
+        s = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
+        if (s.length == 0) s = [[NSUUID UUID] UUIDString];
+        [d setObject:s forKey:@"awj_device_id"];
+    }
+    return s;
+}
+
+static void lic_post(NSString* path, NSDictionary* body, void (^cb)(NSDictionary*)) {
+    NSString* urlStr = [@"http://154.94.239.25:8090" stringByAppendingString:path];
+    NSURL* url = [NSURL URLWithString:urlStr];
+    NSMutableURLRequest* req = [NSMutableURLRequest requestWithURL:url];
+    req.HTTPMethod = @"POST";
+    [req setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+    req.HTTPBody = [NSJSONSerialization dataWithJSONObject:body options:0 error:nil];
+    req.timeoutInterval = 8;
+    [[[NSURLSession sharedSession] dataTaskWithRequest:req completionHandler:^(NSData* data, NSURLResponse* resp, NSError* err) {
+        NSDictionary* j = nil;
+        if (data) {
+            id o = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+            if ([o isKindOfClass:NSDictionary.class]) j = o;
+        }
+        NSDictionary* r = j ?: @{@"ok": @NO, @"msg": @"网络错误"};
+        dispatch_async(dispatch_get_main_queue(), ^{ cb(r); });
+    }] resume];
+}
+
+static void lic_check(void) {
+    NSUserDefaults* d = [NSUserDefaults standardUserDefaults];
+    NSString* tok = [d stringForKey:@"awj_license_key"];
+    if (tok.length == 0) { g_lic_ok = 0; return; }
+    lic_post(@"/api/check", @{@"token": tok, @"device": awj_device_id()}, ^(NSDictionary* r){
+        if ([r[@"ok"] boolValue]) {
+            g_lic_ok = 1;
+            g_lic_exp = r[@"expire_text"];
+            [d setObject:g_lic_exp ?: @"" forKey:@"awj_license_expire"];
+        } else {
+            g_lic_ok = 0;
+        }
+        LOG("license check ok=%d", g_lic_ok);
+    });
+}
+
+static void lic_activate_dialog(UIViewController* vc, void (^done)(BOOL, NSString*)) {
+    if (!vc) return;
+    UIAlertController* ac = [UIAlertController alertControllerWithTitle:@"输入卡密"
+                                                               message:@"格式：AWJ-XXXX-XXXX-XXXX-XXXX"
+                                                        preferredStyle:UIAlertControllerStyleAlert];
+    [ac addTextFieldWithConfigurationHandler:^(UITextField* tf){
+        tf.placeholder = @"卡密";
+        tf.autocapitalizationType = UITextAutocapitalizationTypeAllCharacters;
+        tf.autocorrectionType = UITextAutocorrectionTypeNo;
+    }];
+    [ac addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+    [ac addAction:[UIAlertAction actionWithTitle:@"激活" style:UIAlertActionStyleDefault handler:^(UIAlertAction* a){
+        NSString* key = [ac.textFields.firstObject.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        if (key.length == 0) return;
+        LOG("activate try");
+        lic_post(@"/api/activate", @{@"key": key, @"device": awj_device_id()}, ^(NSDictionary* r){
+            BOOL ok = [r[@"ok"] boolValue];
+            if (ok) {
+                NSUserDefaults* d = [NSUserDefaults standardUserDefaults];
+                [d setObject:r[@"token"] ?: @"" forKey:@"awj_license_key"];
+                [d setObject:r[@"expire_text"] ?: @"" forKey:@"awj_license_expire"];
+                g_lic_ok = 1;
+                g_lic_exp = r[@"expire_text"];
+            }
+            LOG("activate ok=%d", ok);
+            done(ok, ok ? nil : (r[@"msg"] ?: @"激活失败"));
+        });
+    }]];
+    [vc presentViewController:ac animated:YES completion:nil];
+}
+
 static void ensure_resolved(void) {
     if (!unity_loaded()) return;
     if (!x_domain_get) resolve_api();
@@ -881,27 +962,55 @@ static void awj_toggle_panel(void) {
     footer.backgroundColor = [UIColor colorWithWhite:0 alpha:0.22];
     [p addSubview:footer];
 
-    NSString* licExp = [[NSUserDefaults standardUserDefaults] stringForKey:@"awj_license_expire"];
-    UILabel* licLabel = [[UILabel alloc] initWithFrame:CGRectMake(12, 9, w - 96, 18)];
-    licLabel.text = (licExp.length > 0) ? [NSString stringWithFormat:@"卡密到期: %@", licExp]
-                                        : @"卡密到期: 未激活";
-    licLabel.textColor = [UIColor colorWithWhite:0.85 alpha:1];
-    licLabel.font = [UIFont systemFontOfSize:11];
-    licLabel.adjustsFontSizeToFitWidth = YES;
-    licLabel.minimumScaleFactor = 0.7;
-    [footer addSubview:licLabel];
+    UIButton* licBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+    licBtn.frame = CGRectMake(10, 8, w - 92, 20);
+    licBtn.contentHorizontalAlignment = UIControlContentHorizontalAlignmentLeft;
+    licBtn.titleLabel.font = [UIFont systemFontOfSize:11];
+    [licBtn setTitleColor:[UIColor colorWithWhite:0.85 alpha:1] forState:UIControlStateNormal];
+    if (g_lic_ok) {
+        [licBtn setTitle:[NSString stringWithFormat:@"卡密到期: %@", g_lic_exp ?: @""]
+                forState:UIControlStateNormal];
+    } else {
+        [licBtn setTitle:@"未激活，点此输入卡密" forState:UIControlStateNormal];
+    }
+    [footer addSubview:licBtn];
 
-    UIButton* unbindBtn = awj_btn(@"解绑", awj_off_color(), ^{
-        NSUserDefaults* d = [NSUserDefaults standardUserDefaults];
-        [d removeObjectForKey:@"awj_license_key"];
-        [d removeObjectForKey:@"awj_license_expire"];
-        licLabel.text = @"卡密到期: 未激活";
-        LOG("license unbound");
-    });
+    __weak UIButton* weakLic = licBtn;
+    [licBtn addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+        if (g_lic_ok) return;
+        lic_activate_dialog(g_awj_host.rootViewController, ^(BOOL ok, NSString* msg){
+            if (ok) {
+                [weakLic setTitle:[NSString stringWithFormat:@"卡密到期: %@", g_lic_exp ?: @""]
+                         forState:UIControlStateNormal];
+            } else {
+                LOG("activation failed: %s", msg.UTF8String);
+            }
+        });
+    }] forControlEvents:UIControlEventTouchUpInside];
+
+    UIButton* unbindBtn = awj_btn(@"解绑", awj_off_color(), ^{});
     unbindBtn.titleLabel.font = [UIFont boldSystemFontOfSize:11];
     unbindBtn.layer.cornerRadius = 6;
     unbindBtn.frame = CGRectMake(w - 76, 6, 64, 24);
     [footer addSubview:unbindBtn];
+
+    [unbindBtn addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+        NSUserDefaults* d = [NSUserDefaults standardUserDefaults];
+        NSString* tok = [d stringForKey:@"awj_license_key"];
+        if (tok.length == 0) return;
+        lic_post(@"/api/unbind", @{@"token": tok}, ^(NSDictionary* r){
+            if ([r[@"ok"] boolValue]) {
+                [d removeObjectForKey:@"awj_license_key"];
+                [d removeObjectForKey:@"awj_license_expire"];
+                g_lic_ok = 0;
+                g_lic_exp = nil;
+                [weakLic setTitle:@"未激活，点此输入卡密" forState:UIControlStateNormal];
+                LOG("license unbound");
+            } else {
+                LOG("unbind failed: %s", [r[@"msg"] ?: @"?" UTF8String]);
+            }
+        });
+    }] forControlEvents:UIControlEventTouchUpInside];
 
     [g_awj_host addSubview:p];
     g_awj_panel = p;
@@ -930,8 +1039,17 @@ static void awj_build_ui(void) {
     ball.layer.cornerRadius = 22;
     ball.layer.borderWidth = 1.5;
     ball.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.6].CGColor;
-    [ball addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){ awj_toggle_panel(); }]
-        forControlEvents:UIControlEventTouchUpInside];
+    [ball addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+        if (!g_lic_ok) {
+            UIViewController* vc = g_awj_host.rootViewController;
+            lic_activate_dialog(vc, ^(BOOL ok, NSString* msg){
+                if (ok) awj_toggle_panel();
+                else LOG("activation failed: %s", msg.UTF8String);
+            });
+            return;
+        }
+        awj_toggle_panel();
+    }] forControlEvents:UIControlEventTouchUpInside];
     [host addSubview:ball];
     awj_make_draggable(ball, ball);
     g_awj_ball = ball;
@@ -943,6 +1061,7 @@ __attribute__((constructor))
 static void awj_init(void) {
     const char* home = getenv("HOME");
     LOG("loaded pid=%d home=%s", getpid(), home ? home : "?");
+    lic_check();
     pthread_t t;
     pthread_create(&t, NULL, udp_thread, NULL);
     pthread_create(&t, NULL, auto_thread, NULL);
