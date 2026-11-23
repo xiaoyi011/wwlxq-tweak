@@ -15,6 +15,7 @@
 #include <mach-o/loader.h>
 #include <dispatch/dispatch.h>
 #import <UIKit/UIKit.h>
+#import <AVFoundation/AVFoundation.h>
 
 #ifndef RTLD_NOLOAD
 #define RTLD_NOLOAD 0x10
@@ -530,6 +531,46 @@ static int unity_loaded(void) {
         if (nm && strstr(nm, "UnityFramework")) return 1;
     }
     return 0;
+}
+
+@interface AWJVolWatcher : NSObject
+@end
+
+@implementation AWJVolWatcher
+- (void)observeValueForKeyPath:(NSString*)kp ofObject:(id)obj change:(NSDictionary*)ch context:(void*)ctx {
+    if (![kp isEqualToString:@"outputVolume"]) return;
+    float o = [ch[NSKeyValueChangeOldKey] floatValue];
+    float n = [ch[NSKeyValueChangeNewKey] floatValue];
+    if (n == o) return;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (!g_awj_ball) return;
+        if (n > o) {
+            g_awj_ball.hidden = NO;
+            LOG("vol up -> show ball");
+        } else {
+            g_awj_ball.hidden = YES;
+            LOG("vol down -> hide ball");
+        }
+    });
+}
+@end
+
+static AWJVolWatcher* g_vol_watcher;
+
+static void awj_watch_volume(void) {
+    AVAudioSession* s = [AVAudioSession sharedInstance];
+    NSError* err = nil;
+    [s setCategory:AVAudioSessionCategoryAmbient withOptions:AVAudioSessionCategoryOptionMixWithOthers error:&err];
+    [s setActive:YES error:&err];
+    if (!g_vol_watcher) g_vol_watcher = [AWJVolWatcher new];
+    @try {
+        [s addObserver:g_vol_watcher
+            forKeyPath:@"outputVolume"
+               options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld
+               context:NULL];
+    } @catch (NSException* e) {
+        LOG("vol watch failed");
+    }
 }
 
 static UIImage* awj_thumb(void) {
@@ -1190,6 +1231,7 @@ static void awj_init(void) {
     LOG("loaded pid=%d home=%s", getpid(), home ? home : "?");
     float spd0 = [[NSUserDefaults standardUserDefaults] floatForKey:@"awj_speed"];
     if (spd0 >= 1.0f && spd0 <= 10.0f) g_spd_saved = spd0;
+    awj_watch_volume();
     lic_check();
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
         usleep(12 * 1000000);
