@@ -369,14 +369,21 @@ static JavaVM* g_vm;
 
 static int ensure_vm(void) {
     if (g_vm) return 1;
-    void* art = dlopen("libart.so", RTLD_NOW);
-    if (!art) return 0;
-    jint (*getvms)(JavaVM**, jsize, jsize*) = (void*)dlsym(art, "JNI_GetCreatedJavaVMs");
-    if (!getvms) return 0;
+    jint (*getvms)(JavaVM**, jsize, jsize*) = (void*)dlsym(RTLD_DEFAULT, "JNI_GetCreatedJavaVMs");
+    if (!getvms) {
+        const char* libs[] = {"libart.so", "libnativehelper.so", "libnativebridge.so"};
+        for (int i = 0; i < 3 && !getvms; i++) {
+            void* h = dlopen(libs[i], RTLD_NOW);
+            if (h) getvms = (void*)dlsym(h, "JNI_GetCreatedJavaVMs");
+            LOGI("vm lib %s handle=%p sym=%p", libs[i], h, getvms);
+        }
+    }
+    if (!getvms) { LOGE("no JNI_GetCreatedJavaVMs"); return 0; }
     JavaVM* vm = NULL;
     jsize n = 0;
-    if (getvms(&vm, 1, &n) != 0 || !vm) return 0;
+    if (getvms(&vm, 1, &n) != 0 || !vm) { LOGE("no vm yet n=%d", (int)n); return 0; }
     g_vm = vm;
+    LOGI("vm acquired");
     return 1;
 }
 
@@ -390,7 +397,9 @@ static jobject current_app(JNIEnv* env) {
 
 static void* boot_thread(void* arg) {
     (void)arg;
+    LOGI("boot thread start");
     for (int i = 0; i < 600; i++) {
+        if ((i % 20) == 0) LOGI("boot tick %d", i);
         if (ensure_vm()) {
             JNIEnv* env = NULL;
             if ((*g_vm)->AttachCurrentThread(g_vm, &env, NULL) == JNI_OK && env) {
@@ -425,6 +434,8 @@ static void* boot_thread(void* arg) {
 }
 
 __attribute__((constructor)) static void awj_ctor(void) {
+    LOGI("ctor fired");
     pthread_t t;
     if (pthread_create(&t, NULL, boot_thread, NULL) == 0) pthread_detach(t);
+    else LOGE("boot thread create failed");
 }
