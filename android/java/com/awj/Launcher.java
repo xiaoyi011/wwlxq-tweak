@@ -158,89 +158,88 @@ public final class Launcher {
             curActivity = a;
             String cn = a.getClass().getName();
             if (cn.contains("GameMainActivity")) startInit(cn);
-            Window w = a.getWindow();
-            if (w != null) installVolumeKeys(w);
         } catch (Throwable t) {
             logger("attach err " + t);
         }
     }
 
     static void dismissBall() {
+        if (overlayBall != null && wm != null) {
+            try { wm.removeView(overlayBall); } catch (Throwable ignored) {}
+            overlayBall = null;
+            ball = null;
+        }
         if (ballDlg != null) {
             try { ballDlg.dismiss(); } catch (Throwable ignored) {}
             ballDlg = null;
             ballWin = null;
-            ball = null;
         }
     }
 
+    static WindowManager wm;
+    static View overlayBall;
+    static WindowManager.LayoutParams ovLp;
+
     static void ensureBall(final Activity act) {
-        if (act == null || act.isFinishing()) return;
         if (!licensed) { dismissBall(); return; }
-        if (ballDlg != null && ballAct == act && ballDlg.isShowing()) return;
-        dismissBall();
+        if (overlayBall != null) return;
         try {
-            final Dialog d = new Dialog(act, android.R.style.Theme_Translucent_NoTitleBar);
-            final TextView b = new TextView(act);
+            if (!Settings.canDrawOverlays(app)) {
+                logger("no overlay permission");
+                return;
+            }
+            wm = (WindowManager) app.getSystemService(Context.WINDOW_SERVICE);
+            final TextView b = new TextView(app);
             b.setText("逸");
             b.setTextColor(C_TEXT);
             b.setGravity(Gravity.CENTER);
             b.setTextSize(15);
             b.setBackground(bg(0xE61A8CFF, 22));
-            FrameLayout holder = new FrameLayout(act);
-            holder.addView(b, new FrameLayout.LayoutParams(dp(44), dp(44)));
-            d.setContentView(holder, new ViewGroup.LayoutParams(dp(52), dp(52)));
-            final Window w = d.getWindow();
-            w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
-            w.setGravity(Gravity.TOP | Gravity.LEFT);
-            w.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                    | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-                    | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
-            final WindowManager.LayoutParams lp0 = w.getAttributes();
-            lp0.width = dp(52);
-            lp0.height = dp(52);
-            lp0.x = app.getResources().getDisplayMetrics().widthPixels - dp(70);
-            lp0.y = dp(240);
-            w.setAttributes(lp0);
-            w.setDimAmount(0f);
-            d.show();
-            ballDlg = d;
-            ballAct = act;
-            ballWin = w;
-            ball = b;
+            ovLp = new WindowManager.LayoutParams(
+                    dp(48), dp(48),
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                            | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                    android.graphics.PixelFormat.TRANSLUCENT);
+            ovLp.gravity = Gravity.TOP | Gravity.START;
+            ovLp.x = app.getResources().getDisplayMetrics().widthPixels - dp(72);
+            ovLp.y = dp(240);
             b.setOnTouchListener(new View.OnTouchListener() {
                 float downX, downY;
                 int startX, startY;
                 boolean moved;
                 public boolean onTouch(View v, MotionEvent e) {
-                    WindowManager.LayoutParams lp = ballWin.getAttributes();
                     switch (e.getActionMasked()) {
                         case MotionEvent.ACTION_DOWN:
                             downX = e.getRawX();
                             downY = e.getRawY();
-                            startX = lp.x;
-                            startY = lp.y;
+                            startX = ovLp.x;
+                            startY = ovLp.y;
                             moved = false;
                             return true;
                         case MotionEvent.ACTION_MOVE: {
                             float dx = e.getRawX() - downX;
                             float dy = e.getRawY() - downY;
                             if (Math.abs(dx) > dp(6) || Math.abs(dy) > dp(6)) moved = true;
-                            lp.x = startX + (int) dx;
-                            lp.y = startY + (int) dy;
-                            ballWin.setAttributes(lp);
+                            ovLp.x = startX + (int) dx;
+                            ovLp.y = startY + (int) dy;
+                            if (wm != null) wm.updateViewLayout(v, ovLp);
                             return true;
                         }
                         case MotionEvent.ACTION_UP:
                             logger("ball up moved=" + moved);
-                            if (!moved) onBallClick(ballAct);
+                            if (!moved) onBallClick(topActivity() != null ? topActivity() : curActivity);
                             return true;
                     }
                     return false;
                 }
             });
+            wm.addView(b, ovLp);
+            overlayBall = b;
+            ball = b;
+            logger("ball overlay added");
         } catch (Throwable t) {
-            logger("ball dlg err " + t);
+            logger("ball overlay err " + t);
         }
     }
 
