@@ -178,11 +178,10 @@ typedef struct {
 } GmBtn;
 
 static const GmBtn kGmBtns[] = {
-    {"攻击速度 +100000",      "OnCheatClick", 0, 0},
-    {"SP 拉满",               "OnSpClick", 0, 0},
-    {"城墙无敌（仅我方）",     "OnSelfInvulnerableStationClick", 0, 0},
-    {"2倍/4倍 加速",          "OnSpeedUpClicked", 0, 0},
-    {"冻结怪物移动",           "OnStopMonsterMoveClicked", 0, 0},
+    {"增加攻速",              "OnCheatClick", 0, 0},
+    {"无限银币",              "OnSpClick", 0, 0},
+    {"无敌",                  "OnSelfInvulnerableStationClick", 0, 0},
+    {"停止移动",              "OnStopMonsterMoveClicked", 0, 0},
 };
 
 #define GM_BTN_COUNT ((int)(sizeof(kGmBtns) / sizeof(kGmBtns[0])))
@@ -548,6 +547,42 @@ static void do_set_speed(float rate) {
     if (exc) LOG("speed exc");
 }
 
+// ---- 拖动支持 ----
+@interface AWJPan : NSObject
+@property (nonatomic, weak) UIView* target;
+- (void)handlePan:(UIPanGestureRecognizer*)g;
+@end
+
+@implementation AWJPan
+- (void)handlePan:(UIPanGestureRecognizer*)g {
+    UIView* v = self.target;
+    if (!v) return;
+    CGPoint t = [g translationInView:v.superview];
+    v.center = CGPointMake(v.center.x + t.x, v.center.y + t.y);
+    [g setTranslation:CGPointZero inView:v.superview];
+}
+@end
+
+static NSMutableArray* g_panKeep;
+
+static void awj_make_draggable(UIView* handle, UIView* target) {
+    if (!g_panKeep) g_panKeep = [NSMutableArray array];
+    AWJPan* ph = [AWJPan new];
+    ph.target = target;
+    [g_panKeep addObject:ph];
+    UIPanGestureRecognizer* pan = [[UIPanGestureRecognizer alloc] initWithTarget:ph action:@selector(handlePan:)];
+    [handle addGestureRecognizer:pan];
+}
+
+static UIColor* awj_off_color(void) { return [UIColor colorWithWhite:0.24 alpha:1]; }
+static UIColor* awj_on_color(void)  { return [UIColor colorWithRed:0.15 green:0.58 blue:0.45 alpha:1]; }
+
+static void awj_flash(UIButton* b) {
+    b.backgroundColor = awj_on_color();
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.7 * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{ b.backgroundColor = awj_off_color(); });
+}
+
 static void awj_toggle_panel(void) {
     if (!g_awj_host) return;
     ensure_resolved();
@@ -560,69 +595,83 @@ static void awj_toggle_panel(void) {
 
     CGFloat w = 228;
     CGFloat rowsH = (GM_BTN_COUNT + 3) * 46 + 14;
-    CGFloat hgt = MIN(560, 32 + rowsH + 12);
-    UIView* p = [[UIView alloc] initWithFrame:CGRectMake(8, 96, w, hgt)];
+    CGFloat hgt = MIN(560, 44 + rowsH);
+    CGFloat sw = g_awj_host.bounds.size.width;
+    CGFloat sh = g_awj_host.bounds.size.height;
+
+    UIView* p = [[UIView alloc] initWithFrame:CGRectMake((sw - w) / 2, (sh - hgt) / 2, w, hgt)];
     p.backgroundColor = [UIColor colorWithWhite:0.08 alpha:0.94];
     p.layer.cornerRadius = 14;
     p.layer.borderWidth = 1;
     p.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.25].CGColor;
 
-    UILabel* title = [[UILabel alloc] initWithFrame:CGRectMake(12, 6, w-24, 24)];
+    UIView* bar = [[UIView alloc] initWithFrame:CGRectMake(0, 0, w, 36)];
+    [p addSubview:bar];
+    awj_make_draggable(bar, p);
+
+    UILabel* title = [[UILabel alloc] initWithFrame:CGRectMake(0, 6, w, 24)];
     title.text = @"小逸";
+    title.textAlignment = NSTextAlignmentCenter;
     title.textColor = UIColor.whiteColor;
     title.font = [UIFont boldSystemFontOfSize:17];
-    [p addSubview:title];
+    [bar addSubview:title];
 
     UIButton* xBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    xBtn.frame = CGRectMake(w - 38, 4, 32, 30);
+    xBtn.frame = CGRectMake(w - 38, 3, 32, 30);
     [xBtn setTitle:@"×" forState:UIControlStateNormal];
     [xBtn setTitleColor:[UIColor colorWithWhite:0.85 alpha:1] forState:UIControlStateNormal];
     xBtn.titleLabel.font = [UIFont systemFontOfSize:24 weight:UIFontWeightLight];
     [xBtn addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){ awj_toggle_panel(); }]
         forControlEvents:UIControlEventTouchUpInside];
-    [p addSubview:xBtn];
+    [bar addSubview:xBtn];
 
-    CGFloat listH = hgt - 62;
-    UIScrollView* sv = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 32, w, listH)];
+    CGFloat listH = hgt - 44;
+    UIScrollView* sv = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 36, w, listH)];
     sv.showsVerticalScrollIndicator = YES;
     sv.contentSize = CGSizeMake(w, (GM_BTN_COUNT + 3) * 46 + 8);
     [p addSubview:sv];
 
     int row = 0;
 
-    UIButton* autoBtn = awj_btn(g_auto ? @"自动清场：开" : @"自动清场：关",
-                                [UIColor colorWithWhite:0.30 alpha:1], ^{});
+    UIButton* autoBtn = awj_btn(@"自动清场", awj_off_color(), ^{});
+    autoBtn.backgroundColor = g_auto ? awj_on_color() : awj_off_color();
     autoBtn.frame = CGRectMake(10, 6 + row * 46, w - 20, 40);
     row++;
     [sv addSubview:autoBtn];
     [autoBtn addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
         g_auto = !g_auto;
-        [autoBtn setTitle:(g_auto ? @"自动清场：开" : @"自动清场：关") forState:UIControlStateNormal];
+        autoBtn.backgroundColor = g_auto ? awj_on_color() : awj_off_color();
         LOG("auto=%d", g_auto);
     }] forControlEvents:UIControlEventTouchUpInside];
 
-    UIButton* winBtn = awj_btn(@"直接判胜（自动模式）",
-                               [UIColor colorWithRed:0.2 green:0.6 blue:0.3 alpha:1], ^{
+    UIButton* winBtn = awj_btn(@"直接判胜", awj_off_color(), ^{
         ensure_resolved();
         LOG("tap: win");
         run_on_main(^{ do_win(); });
     });
+    winBtn.backgroundColor = awj_off_color();
     winBtn.frame = CGRectMake(10, 6 + row * 46, w - 20, 40);
     row++;
     [sv addSubview:winBtn];
+    [winBtn addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.05 * NSEC_PER_SEC)),
+                       dispatch_get_main_queue(), ^{ awj_flash(winBtn); });
+    }] forControlEvents:UIControlEventTouchUpInside];
 
     for (int i = 0; i < GM_BTN_COUNT; i++) {
         int idx = i;
-        UIColor* c = (i % 3 == 0) ? [UIColor colorWithRed:0.55 green:0.2 blue:0.2 alpha:1]
-                    : (i % 3 == 1) ? [UIColor colorWithRed:0.2 green:0.35 blue:0.6 alpha:1]
-                                   : [UIColor colorWithWhite:0.22 alpha:1];
-        UIButton* b = awj_btn([NSString stringWithUTF8String:kGmBtns[i].title], c, ^{
+        UIButton* b = awj_btn([NSString stringWithUTF8String:kGmBtns[i].title], awj_off_color(), ^{
             LOG("tap: %s", kGmBtns[idx].method);
             run_on_main(^{ gm_call(idx); });
         });
+        b.backgroundColor = awj_off_color();
         b.frame = CGRectMake(10, 6 + row * 46, w - 20, 40);
         row++;
         [sv addSubview:b];
+        [b addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.05 * NSEC_PER_SEC)),
+                           dispatch_get_main_queue(), ^{ awj_flash(b); });
+        }] forControlEvents:UIControlEventTouchUpInside];
     }
 
     // 自定义加速滑条 1x - 32x
@@ -678,6 +727,7 @@ static void awj_build_ui(void) {
     [ball addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){ awj_toggle_panel(); }]
         forControlEvents:UIControlEventTouchUpInside];
     [host addSubview:ball];
+    awj_make_draggable(ball, ball);
     g_awj_ball = ball;
 
     LOG("ui built on game window");
