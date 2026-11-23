@@ -658,12 +658,13 @@ static void awj_toggle_panel(void) {
     int gridRows = (gridItems + 1) / 2;
     CGFloat footerH = 44;
     CGFloat gridH = (CGFloat)gridRows * 46.0f;
-    CGFloat attrH = 6 * 46.0f;
-    CGFloat contentH = gridH + 16 + 46 + attrH + 46 + 12;
+    CGFloat rowH = 40.0f;
+    CGFloat attrH = 6 * rowH;
+    CGFloat contentH = gridH + 16 + rowH + attrH + rowH + 12;
     CGFloat sw = g_awj_host.bounds.size.width;
     CGFloat sh = g_awj_host.bounds.size.height;
     // 只露出 3 个属性行，其余靠滚动
-    CGFloat hgt = MIN(36 + gridH + 16 + 46 + 3 * 46 + footerH + 8, sh * 0.8f);
+    CGFloat hgt = MIN(36 + gridH + 16 + rowH + 3 * rowH + footerH + 8, sh * 0.8f);
 
     UIView* p = [[UIView alloc] initWithFrame:CGRectMake((sw - w) / 2, (sh - hgt) / 2, w, hgt)];
     p.backgroundColor = [UIColor colorWithRed:14/255.0 green:27/255.0 blue:46/255.0 alpha:0.94];
@@ -762,13 +763,13 @@ static void awj_toggle_panel(void) {
     CGFloat extraY = 6 + gridH + 16;
 
     // 加速滑条（第 7 项）
-    UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, extraY, w - 20, 18)];
+    UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, extraY + 8, 100, 24)];
     spdLabel.text = @"加速: 1x";
     spdLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
     spdLabel.font = [UIFont boldSystemFontOfSize:13];
     [sv addSubview:spdLabel];
 
-    UISlider* spdSlider = [[UISlider alloc] initWithFrame:CGRectMake(10, extraY + 22, w - 20, 20)];
+    UISlider* spdSlider = [[UISlider alloc] initWithFrame:CGRectMake(116, extraY + 11, w - 126, 18)];
     spdSlider.minimumValue = 1.0f;
     spdSlider.maximumValue = 32.0f;
     spdSlider.value = 1.0f;
@@ -793,24 +794,24 @@ static void awj_toggle_panel(void) {
 
     for (int a = 0; a < (int)attrs.count; a++) {
         NSString* name = attrs[a];
-        CGFloat ry = extraY + 46 + a * 46;
+        CGFloat ry = extraY + rowH + 6 + a * rowH;
 
-        UILabel* nameLab = [[UILabel alloc] initWithFrame:CGRectMake(10, ry + 4, 96, 18)];
+        UILabel* nameLab = [[UILabel alloc] initWithFrame:CGRectMake(10, ry + 6, 88, 24)];
         nameLab.text = name;
         nameLab.textColor = [UIColor colorWithWhite:0.9 alpha:1];
         nameLab.font = [UIFont boldSystemFontOfSize:12];
         nameLab.adjustsFontSizeToFitWidth = YES;
-        nameLab.minimumScaleFactor = 0.7;
+        nameLab.minimumScaleFactor = 0.65;
         [sv addSubview:nameLab];
 
-        UILabel* valLab = [[UILabel alloc] initWithFrame:CGRectMake(220, ry + 4, 70, 18)];
+        UILabel* valLab = [[UILabel alloc] initWithFrame:CGRectMake(98, ry + 6, 58, 24)];
         valLab.text = @"0";
         valLab.textColor = [UIColor colorWithWhite:0.85 alpha:1];
         valLab.font = [UIFont systemFontOfSize:12];
         valLab.textAlignment = NSTextAlignmentRight;
         [sv addSubview:valLab];
 
-        UISlider* sl = [[UISlider alloc] initWithFrame:CGRectMake(10, ry + 24, w - 20, 18)];
+        UISlider* sl = [[UISlider alloc] initWithFrame:CGRectMake(162, ry + 9, w - 172, 18)];
         sl.minimumValue = 0;
         sl.maximumValue = 1000;
         sl.minimumTrackTintColor = [UIColor colorWithRed:0.15 green:0.6 blue:0.5 alpha:1];
@@ -845,14 +846,16 @@ static void awj_toggle_panel(void) {
     }
 
     // 怪物血量滑条（放到最下面）
-    CGFloat hy = extraY + 46 + attrH + 12;
-    UILabel* hpLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, hy, w - 20, 18)];
+    CGFloat hy = extraY + rowH + attrH + 12;
+    UILabel* hpLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, hy + 8, 130, 24)];
     hpLabel.text = @"怪物血量: 100%";
     hpLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
     hpLabel.font = [UIFont boldSystemFontOfSize:13];
+    hpLabel.adjustsFontSizeToFitWidth = YES;
+    hpLabel.minimumScaleFactor = 0.7;
     [sv addSubview:hpLabel];
 
-    UISlider* hpSlider = [[UISlider alloc] initWithFrame:CGRectMake(10, hy + 22, w - 20, 20)];
+    UISlider* hpSlider = [[UISlider alloc] initWithFrame:CGRectMake(146, hy + 11, w - 156, 18)];
     hpSlider.minimumValue = 1;
     hpSlider.maximumValue = 100;
     hpSlider.value = 100;
