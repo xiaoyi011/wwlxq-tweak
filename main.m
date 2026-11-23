@@ -70,6 +70,7 @@ static void*            (*x_class_get_field_from_name)(void*, const char*);
 static size_t           (*x_field_get_offset)(void*);
 static void             (*x_field_static_get_value)(void*, void*);
 static void             (*x_field_get_value)(void*, void*, void*);
+static void             (*x_field_set_value)(void*, void*, void*);
 static void*            (*x_runtime_invoke)(void*, void*, void**, void**);
 
 static void* sym(const char* name) {
@@ -123,7 +124,6 @@ static void* g_m_is_pvp;           // BattleProxy.IsPvp()
 static void* g_level_field;        // BaseViewExtend.battleLevelProxy (static)
 static void* g_maxround_field;     // BattleLevelProxy.maxRound
 static void* g_round_field;        // BattlePvpProxy.round
-static void  (*x_field_set_value)(void*, void*, void*);
 static void* g_m_get_entity;       // BattleEntityProxy.GetEntity
 static void* g_proxy_field;        // BattleReduceHpCtrl.battleEntityProxy
 static size_t g_proxy_offset;
