@@ -103,6 +103,7 @@ static int resolve_api(void) {
     RESOLVE(x_field_get_offset, "il2cpp_field_get_offset");
     RESOLVE(x_field_static_get_value, "il2cpp_field_static_get_value");
     RESOLVE(x_field_get_value, "il2cpp_field_get_value");
+    RESOLVE(x_field_set_value, "il2cpp_field_set_value");
     RESOLVE(x_runtime_invoke, "il2cpp_runtime_invoke");
     return x_domain_get && x_runtime_invoke && x_class_from_name;
 }
@@ -119,6 +120,10 @@ static void* g_bpvp_field;         // BaseViewExtend.battlePvpProxy (static)
 static void* g_m_set_result;       // BattlePvpProxy.SetBattleResult(BattleResult, bool)
 static void* g_bproxy_field;       // BattlePvpProxy.battleProxy (instance)
 static void* g_m_is_pvp;           // BattleProxy.IsPvp()
+static void* g_level_field;        // BaseViewExtend.battleLevelProxy (static)
+static void* g_maxround_field;     // BattleLevelProxy.maxRound
+static void* g_round_field;        // BattlePvpProxy.round
+static void  (*x_field_set_value)(void*, void*, void*);
 static void* g_m_get_entity;       // BattleEntityProxy.GetEntity
 static void* g_proxy_field;        // BattleReduceHpCtrl.battleEntityProxy
 static size_t g_proxy_offset;
@@ -212,6 +217,11 @@ static int resolve_game(void) {
         g_bproxy_field = x_class_get_field_from_name(bpp, "battleProxy");
     }
     if (bp) g_m_is_pvp = x_class_get_method_from_name(bp, "IsPvp", 0);
+
+    void* blp = class_of(g_image, "BattleLevelProxy");
+    if (bve) g_level_field = x_class_get_field_from_name(bve, "battleLevelProxy");
+    if (blp) g_maxround_field = x_class_get_field_from_name(blp, "maxRound");
+    if (bpp) g_round_field = x_class_get_field_from_name(bpp, "round");
     LOG("set_result=%d is_pvp=%d bproxy=%d", g_m_set_result != NULL,
         g_m_is_pvp != NULL, g_bproxy_field != NULL);
 
@@ -297,7 +307,27 @@ static void do_win(void) {
         }
     }
 
-    // 非 PVP：杀光怪物，让游戏按正常流程结算并发奖励
+    // 非 PVP：把当前回合设为最后一回合，再清场，让游戏走正常结算
+    if (g_level_field && g_maxround_field && g_round_field && x_field_set_value) {
+        void* pp = NULL;
+        void* lp = NULL;
+        x_field_static_get_value(g_bpvp_field, &pp);
+        x_field_static_get_value(g_level_field, &lp);
+        if (pp && lp) {
+            int32_t cur = 0;
+            x_field_get_value(pp, g_round_field, &cur);
+            int32_t mr = 9999;
+            x_field_get_value(lp, g_maxround_field, &mr);
+            if (cur > 0 && cur != mr) {
+                int32_t set = cur;
+                x_field_set_value(lp, g_maxround_field, &set);
+                LOG("win: maxRound %d -> %d", mr, cur);
+            } else {
+                LOG("win: round=%d maxRound=%d (no change)", cur, mr);
+            }
+        }
+    }
+
     void* v = view();
     if (!v) { LOG("win: no view"); return; }
     invoke0(g_m_kill_monster, v, "win-clear");
