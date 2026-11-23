@@ -106,13 +106,6 @@ public final class Launcher {
                     try { Thread.sleep(2000); } catch (Exception ignored) {}
                 }
                 logger("native init=" + r);
-                if (DEBUG_UNLOCK) {
-                    H.postDelayed(new Runnable() {
-                        public void run() {
-                            if (curActivity != null) togglePanel(curActivity);
-                        }
-                    }, 15000);
-                }
                 licenseCheck();
                 H.postDelayed(hbTask, 15000);
                 H.postDelayed(loopTask, 3000);
@@ -299,6 +292,16 @@ public final class Launcher {
 
     static void updateBallVisibility() {
         if (licensed) {
+            if (!Settings.canDrawOverlays(app)) {
+                try {
+                    android.content.Intent i = new android.content.Intent(
+                            android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            android.net.Uri.parse("package:" + app.getPackageName()));
+                    i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                    app.startActivity(i);
+                } catch (Throwable ignored) {}
+                return;
+            }
             Activity a = topActivity();
             if (a == null) a = curActivity;
             ensureBall(a);
@@ -438,7 +441,7 @@ public final class Launcher {
         final TextView bInv = mkBtn("无敌", C_BTN);
         final TextView bStop = mkBtn("停止移动", C_BTN);
         final TextView bClear = mkBtn("清场", C_BTN);
-        final TextView bHint = mkBtn("音量上打开 / 音量下隐藏", 0xFF1C283C);
+        final TextView bHint = mkBtn("点悬浮球开关面板", 0xFF1C283C);
         bHint.setTextSize(9);
         bHint.setTextColor(C_DIM);
 
@@ -530,7 +533,7 @@ public final class Launcher {
         unbind.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { doUnbind(unbind); }
         });
-        foot.addView(unbind, new LinearLayout.LayoutParams(dp(76), dp(30)));
+        foot.addView(unbind, new LinearLayout.LayoutParams(dp(92), dp(30)));
         p.addView(foot);
 
         // 事件绑定
