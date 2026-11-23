@@ -545,6 +545,7 @@ static int g_lic_ok = 0;
 static NSString* g_lic_exp = nil;
 static NSString* g_lock_msg = nil;
 static int g_lock_alerted = 0;
+static int g_unbind_left = -1;
 
 static NSString* awj_device_id(void) {
     NSUserDefaults* d = [NSUserDefaults standardUserDefaults];
@@ -667,6 +668,7 @@ static void lic_check(void) {
         if ([r[@"ok"] boolValue]) {
             g_lic_ok = 1;
             g_lic_exp = r[@"expire_text"];
+            if (r[@"unbind_left"]) g_unbind_left = [r[@"unbind_left"] intValue];
             [d setObject:g_lic_exp ?: @"" forKey:@"awj_license_expire"];
         } else {
             g_lic_ok = 0;
@@ -698,6 +700,7 @@ static void lic_activate_dialog(UIViewController* vc, void (^done)(BOOL, NSStrin
                 [d setObject:r[@"expire_text"] ?: @"" forKey:@"awj_license_expire"];
                 g_lic_ok = 1;
                 g_lic_exp = r[@"expire_text"];
+                if (r[@"unbind_left"]) g_unbind_left = [r[@"unbind_left"] intValue];
                 lic_heartbeat();
             }
             LOG("activate ok=%d", ok);
@@ -1076,10 +1079,13 @@ static void awj_toggle_panel(void) {
         });
     }] forControlEvents:UIControlEventTouchUpInside];
 
-    UIButton* unbindBtn = awj_btn(@"解绑", awj_off_color(), ^{});
+    NSString* unbindTitle = g_unbind_left >= 0
+        ? [NSString stringWithFormat:@"解绑(%d)", g_unbind_left]
+        : @"解绑";
+    UIButton* unbindBtn = awj_btn(unbindTitle, awj_off_color(), ^{});
     unbindBtn.titleLabel.font = [UIFont boldSystemFontOfSize:11];
     unbindBtn.layer.cornerRadius = 6;
-    unbindBtn.frame = CGRectMake(w - 76, 6, 64, 24);
+    unbindBtn.frame = CGRectMake(w - 86, 6, 74, 24);
     [footer addSubview:unbindBtn];
 
     [unbindBtn addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
@@ -1092,6 +1098,11 @@ static void awj_toggle_panel(void) {
                 [d removeObjectForKey:@"awj_license_expire"];
                 g_lic_ok = 0;
                 g_lic_exp = nil;
+                if (r[@"unbind_left"]) {
+                    g_unbind_left = [r[@"unbind_left"] intValue];
+                    [unbindBtn setTitle:[NSString stringWithFormat:@"解绑(%d)", g_unbind_left]
+                               forState:UIControlStateNormal];
+                }
                 [weakLic setTitle:@"未激活，点此输入卡密" forState:UIControlStateNormal];
                 LOG("license unbound");
             } else {
