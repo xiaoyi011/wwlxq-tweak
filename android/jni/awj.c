@@ -283,11 +283,16 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
     static time_t g_ready_at = 0;
     if (!unity_ready()) { g_ready_at = 0; return -3; }
-    if (g_ready_at == 0) g_ready_at = time(NULL);
+    if (g_ready_at == 0) { g_ready_at = time(NULL); LOGI("unity main seen"); }
     if (time(NULL) - g_ready_at < 5) return -4;
-    if (!resolve_api()) return -1;
-    if (!x_domain_get()) return -2;
-    return resolve_game() ? 1 : 0;
+    LOGI("resolving api");
+    if (!resolve_api()) { LOGE("api resolve failed"); return -1; }
+    LOGI("api ok");
+    if (!x_domain_get()) { LOGE("domain null"); return -2; }
+    LOGI("domain ok, resolving game");
+    int r = resolve_game() ? 1 : 0;
+    LOGI("game resolve r=%d", r);
+    return r;
 }
 
 JNIEXPORT jint JNICALL
