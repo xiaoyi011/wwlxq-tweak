@@ -795,12 +795,24 @@ static void awj_toggle_panel(void) {
         UISlider* sl = [[UISlider alloc] initWithFrame:CGRectMake(10, ry + 24, w - 20, 18)];
         sl.minimumValue = 0;
         sl.maximumValue = 1000;
-        sl.value = 0;
         sl.minimumTrackTintColor = [UIColor colorWithRed:0.15 green:0.6 blue:0.5 alpha:1];
+
+        NSString* keepKey = [NSString stringWithFormat:@"awj_attr_%@", name];
+        NSUserDefaults* ud = [NSUserDefaults standardUserDefaults];
+        float savedVal = [ud floatForKey:keepKey];
+        if (savedVal > 0 && savedVal <= 1000) {
+            sl.value = roundf(savedVal);
+            valLab.text = [NSString stringWithFormat:@"%d", (int)(roundf(savedVal)) * 1000];
+        } else {
+            sl.value = 0;
+            valLab.text = @"0";
+        }
+
         [sl addAction:[UIAction actionWithHandler:^(__kindof UIAction* a2){
             int v = (int)(roundf(sl.value)) * 1000;
             sl.value = v / 1000;
             valLab.text = [NSString stringWithFormat:@"%d", v];
+            [[NSUserDefaults standardUserDefaults] setFloat:sl.value forKey:keepKey];
         }] forControlEvents:UIControlEventValueChanged];
         [sl addAction:[UIAction actionWithHandler:^(__kindof UIAction* a2){
             int v = (int)(roundf(sl.value)) * 1000;
