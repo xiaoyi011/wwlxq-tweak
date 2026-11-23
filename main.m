@@ -22,6 +22,11 @@
 static UIButton* g_awj_ball;
 static UIView*   g_awj_panel;
 static void awj_build_ui(void);
+static void gm_call2(int idx, int quiet);
+
+static volatile int g_t_atk = 0;   // 增加攻速（持续）
+static volatile int g_t_sp  = 0;   // 无限银币/SP（持续）
+static volatile int g_t_inv = 0;   // 无敌（持续）
 
 #define TAG "[AWJ] "
 static FILE* g_log;
@@ -427,13 +432,21 @@ static void handle(const char* cmd) {
 
 static void* auto_thread(void* arg) {
     (void)arg;
+    int tick = 0;
     while (1) {
+        tick++;
         if (g_auto) {
-            // 500ms 一次，主线程执行
             g_pending = 1;
             run_on_main(^{
                 if (g_pending) { g_pending = 0; do_clear(); }
             });
+        }
+        if (g_t_sp) {
+            run_on_main(^{ gm_call2(1, 1); });      // 无限银币
+        }
+        if (tick % 4 == 0) {                         // 每 2 秒
+            if (g_t_atk) run_on_main(^{ gm_call2(0, 1); });   // 增加攻速
+            if (g_t_inv) run_on_main(^{ gm_call2(2, 1); });   // 无敌
         }
         usleep(500000);
     }
@@ -513,7 +526,7 @@ static void ensure_resolved(void) {
     if (!g_m_kill_monster && x_domain_get) resolve_game();
 }
 
-static void gm_call(int idx) {
+static void gm_call2(int idx, int quiet) {
     ensure_resolved();
     if (!g_gm_fn[idx] && g_dv_class)
         g_gm_fn[idx] = x_class_get_method_from_name(g_dv_class, kGmBtns[idx].method, kGmBtns[idx].argc);
@@ -529,8 +542,11 @@ static void gm_call(int idx) {
     } else {
         x_runtime_invoke(fn, v, NULL, &exc);
     }
-    LOG("gm: %s exc=%d", kGmBtns[idx].method, exc != NULL);
+    if (exc) LOG("gm %s exc", kGmBtns[idx].method);
+    else if (!quiet) LOG("gm: %s ok", kGmBtns[idx].method);
 }
+
+static void gm_call(int idx) { gm_call2(idx, 0); }
 
 static void do_set_speed(float rate) {
     if (rate <= 0) rate = 1;
@@ -672,18 +688,32 @@ static void awj_toggle_panel(void) {
                        dispatch_get_main_queue(), ^{ awj_flash(winBtn); });
     }] forControlEvents:UIControlEventTouchUpInside];
 
+    volatile int* tflags[3] = { &g_t_atk, &g_t_sp, &g_t_inv };
+
     for (int i = 0; i < GM_BTN_COUNT; i++) {
         int idx = i;
-        UIButton* b = awj_btn([NSString stringWithUTF8String:kGmBtns[i].title], awj_off_color(), ^{
-            LOG("tap: %s", kGmBtns[idx].method);
-            run_on_main(^{ gm_call(idx); });
-        });
-        b.backgroundColor = awj_off_color();
+        volatile int* flag = (i < 3) ? tflags[i] : NULL;
+        UIButton* b = awj_btn([NSString stringWithUTF8String:kGmBtns[i].title], awj_off_color(), ^{});
+        b.backgroundColor = (flag && *flag) ? awj_on_color() : awj_off_color();
         place(b);
-        [b addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.05 * NSEC_PER_SEC)),
-                           dispatch_get_main_queue(), ^{ awj_flash(b); });
-        }] forControlEvents:UIControlEventTouchUpInside];
+
+        if (flag) {
+            [b addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+                *flag = *flag ? 0 : 1;
+                b.backgroundColor = (*flag) ? awj_on_color() : awj_off_color();
+                LOG("toggle %s -> %d", kGmBtns[idx].method, *flag);
+                if (*flag) run_on_main(^{ gm_call(idx); });
+            }] forControlEvents:UIControlEventTouchUpInside];
+        } else {
+            [b addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+                LOG("tap: %s", kGmBtns[idx].method);
+                run_on_main(^{ gm_call(idx); });
+            }] forControlEvents:UIControlEventTouchUpInside];
+            [b addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.05 * NSEC_PER_SEC)),
+                               dispatch_get_main_queue(), ^{ awj_flash(b); });
+            }] forControlEvents:UIControlEventTouchUpInside];
+        }
     }
 
     // 自定义加速滑条 1x - 32x
