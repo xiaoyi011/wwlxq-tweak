@@ -1,5 +1,5 @@
-// awj tweak: 清场 / 攻速 / 直接判胜，通过 UDP 端口 27043 控制
-// 编译: xcrun --sdk iphoneos clang -arch arm64 -miphoneos-version-min=13.0 \
+// awj tweak: 娓呭満 / 鏀婚€?/ 鐩存帴鍒よ儨锛岄€氳繃 UDP 绔彛 27043 鎺у埗
+// 缂栬瘧: xcrun --sdk iphoneos clang -arch arm64 -miphoneos-version-min=13.0 \
 //         -dynamiclib -O2 -fblocks -o awj.dylib main.c
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,9 +19,22 @@
 #endif
 
 #define TAG "[AWJ] "
-#define LOG(...) do { fprintf(stderr, TAG __VA_ARGS__); fprintf(stderr, "\n"); } while (0)
+static FILE* g_log;
+static void log_file(void) {
+    if (g_log) return;
+    const char* home = getenv("HOME");
+    char path[512];
+    if (home) snprintf(path, sizeof(path), "%s/Documents/awj.log", home);
+    else snprintf(path, sizeof(path), "/tmp/awj.log");
+    g_log = fopen(path, "a");
+}
+#define LOG(...) do { \
+    log_file(); \
+    if (g_log) { fprintf(g_log, TAG __VA_ARGS__); fprintf(g_log, "\n"); fflush(g_log); } \
+    fprintf(stderr, TAG __VA_ARGS__); fprintf(stderr, "\n"); \
+} while (0)
 
-// ---------------- il2cpp 接口 ----------------
+// ---------------- il2cpp 鎺ュ彛 ----------------
 static void*            (*x_domain_get)(void);
 static void**           (*x_domain_get_assemblies)(void*, size_t*);
 static void*            (*x_assembly_get_image)(void*);
@@ -71,7 +84,7 @@ static int resolve_api(void) {
     return x_domain_get && x_runtime_invoke && x_class_from_name;
 }
 
-// ---------------- 游戏对象 ----------------
+// ---------------- 娓告垙瀵硅薄 ----------------
 static void* g_image;
 static void* g_main_panel_field;   // BattleDefine.mainPanel (static)
 static void* g_view_field;         // BattleMainPanel.battleDebugActionView
@@ -102,16 +115,27 @@ static void* find_image(const char* prefix) {
     return NULL;
 }
 
+static int g_miss_logged = 0;
+
 static int resolve_game(void) {
     g_image = find_image("Assembly-CSharp");
-    if (!g_image) return 0;
+    if (!g_image) {
+        if (g_miss_logged < 3) { g_miss_logged++; LOG("miss: no Assembly-CSharp image"); }
+        return 0;
+    }
 
     void* bd  = class_of(g_image, "BattleDefine");
     void* mp  = class_of(g_image, "BattleMainPanel");
     void* dv  = class_of(g_image, "BattleDebugActionView");
     void* rc  = class_of(g_image, "BattleReduceHpCtrl");
     void* ep  = class_of(g_image, "BattleEntityProxy");
-    if (!bd || !mp || !dv || !rc || !ep) return 0;
+    if (!bd || !mp || !dv || !rc || !ep) {
+        if (g_miss_logged < 3) {
+            g_miss_logged++;
+            LOG("miss class: bd=%d mp=%d dv=%d rc=%d ep=%d", bd!=NULL, mp!=NULL, dv!=NULL, rc!=NULL, ep!=NULL);
+        }
+        return 0;
+    }
 
     g_main_panel_field = x_class_get_field_from_name(bd, "mainPanel");
     g_view_field       = x_class_get_field_from_name(mp, "battleDebugActionView");
@@ -148,9 +172,18 @@ static void invoke0(void* method, void* obj, const char* what) {
     if (exc) LOG("%s exception", what);
 }
 
-// ---------------- 命令 ----------------
+// ---------------- 鍛戒护 ----------------
 static volatile int g_auto = 0;
 static volatile int g_pending = 0;
+
+static int g_udp_fd = -1;
+static struct sockaddr_in g_peer;
+static socklen_t g_peer_len = 0;
+
+static void reply(const char* msg) {
+    if (g_udp_fd >= 0 && g_peer_len > 0)
+        sendto(g_udp_fd, msg, strlen(msg), 0, (struct sockaddr*)&g_peer, g_peer_len);
+}
 
 static void do_clear(void) {
     void* v = view();
@@ -176,28 +209,32 @@ static void do_win(void) {
     if (exc) LOG("win exception"); else LOG("win done");
 }
 
-// 主线程执行游戏调用
-static void run_on_main(void (^block)(void)) {
+// 涓荤嚎绋嬫墽琛屾父鎴忚皟鐢?static void run_on_main(void (^block)(void)) {
     dispatch_async(dispatch_get_main_queue(), block);
 }
 
 static void handle(const char* cmd) {
     if (!g_m_kill_monster) { resolve_api(); resolve_game(); }
-    if (!strcmp(cmd, "1")) run_on_main(^{ do_clear(); });
-    else if (!strcmp(cmd, "2")) run_on_main(^{ do_cheat(); });
-    else if (!strcmp(cmd, "3")) run_on_main(^{ do_win(); });
-    else if (!strcmp(cmd, "a1")) { g_auto = 1; LOG("auto on"); }
-    else if (!strcmp(cmd, "a0")) { g_auto = 0; LOG("auto off"); }
-    else if (!strcmp(cmd, "s")) LOG("status auto=%d ready=%d", g_auto, view() != NULL);
-    else LOG("unknown cmd: %s", cmd);
+    if (!strcmp(cmd, "1")) { reply("ok:clear"); run_on_main(^{ do_clear(); }); }
+    else if (!strcmp(cmd, "2")) { reply("ok:cheat"); run_on_main(^{ do_cheat(); }); }
+    else if (!strcmp(cmd, "3")) { reply("ok:win"); run_on_main(^{ do_win(); }); }
+    else if (!strcmp(cmd, "a1")) { g_auto = 1; LOG("auto on"); reply("ok:auto1"); }
+    else if (!strcmp(cmd, "a0")) { g_auto = 0; LOG("auto off"); reply("ok:auto0"); }
+    else if (!strcmp(cmd, "s")) {
+        char b[128];
+        snprintf(b, sizeof(b), "ready=%d auto=%d battle=%d",
+                 g_m_kill_monster != NULL, g_auto, view() != NULL);
+        LOG("status %s", b);
+        reply(b);
+    }
+    else { LOG("unknown cmd: %s", cmd); reply("err:unknown"); }
 }
 
 static void* auto_thread(void* arg) {
     (void)arg;
     while (1) {
         if (g_auto) {
-            // 500ms 一次，主线程执行
-            g_pending = 1;
+            // 500ms 涓€娆★紝涓荤嚎绋嬫墽琛?            g_pending = 1;
             run_on_main(^{
                 if (g_pending) { g_pending = 0; do_clear(); }
             });
@@ -224,14 +261,18 @@ static void* udp_thread(void* arg) {
         return NULL;
     }
     LOG("udp listening on 27043");
+    g_udp_fd = fd;
     char buf[64];
     for (;;) {
         struct sockaddr_in peer;
         socklen_t pl = sizeof(peer);
         ssize_t n = recvfrom(fd, buf, sizeof(buf)-1, 0, (struct sockaddr*)&peer, &pl);
         if (n <= 0) continue;
+        g_peer = peer;
+        g_peer_len = pl;
         buf[n] = 0;
         while (n > 0 && (buf[n-1] == '\n' || buf[n-1] == '\r' || buf[n-1] == ' ')) buf[--n] = 0;
+        LOG("cmd: %s", buf);
         handle(buf);
     }
     return NULL;
@@ -239,17 +280,18 @@ static void* udp_thread(void* arg) {
 
 __attribute__((constructor))
 static void awj_init(void) {
-    LOG("loaded, waiting for il2cpp");
+    const char* home = getenv("HOME");
+    LOG("loaded pid=%d home=%s", getpid(), home ? home : "?");
+    pthread_t t;
+    pthread_create(&t, NULL, udp_thread, NULL);
+    pthread_create(&t, NULL, auto_thread, NULL);
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
-        for (int i = 0; i < 600; i++) {          // 最多等 5 分钟
+        for (int i = 0; i < 600; i++) {          // 鏈€澶氱瓑 5 鍒嗛挓
             if (!x_domain_get && !resolve_api()) { usleep(500000); continue; }
             if (x_domain_get() && resolve_game()) break;
             usleep(500000);
         }
         if (!g_m_kill_monster) LOG("init incomplete (will retry on command)");
-        pthread_t t;
-        pthread_create(&t, NULL, auto_thread, NULL);
-        pthread_create(&t, NULL, udp_thread, NULL);
-        LOG("ready");
+        else LOG("ready");
     });
 }
