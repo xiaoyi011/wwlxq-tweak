@@ -719,7 +719,7 @@ static void awj_toggle_panel(void) {
     // 自定义加速滑条 1x - 32x
     CGFloat sliderTop = 6 + gr * 46 + 4;
     UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, sliderTop, w - 20, 18)];
-    spdLabel.text = @"加速: 1.0x";
+    spdLabel.text = @"加速: 1x";
     spdLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
     spdLabel.font = [UIFont boldSystemFontOfSize:13];
     [sv addSubview:spdLabel];
@@ -730,12 +730,15 @@ static void awj_toggle_panel(void) {
     spdSlider.value = 1.0f;
     spdSlider.minimumTrackTintColor = [UIColor colorWithRed:0.15 green:0.6 blue:0.5 alpha:1];
     [spdSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
-        float v = spdSlider.value;
-        spdLabel.text = [NSString stringWithFormat:@"加速: %.1fx", v];
+        float v = roundf(spdSlider.value);
+        if (v < 1) v = 1;
+        if (v > 32) v = 32;
+        spdSlider.value = v;
+        spdLabel.text = [NSString stringWithFormat:@"加速: %.0fx", v];
         run_on_main(^{ do_set_speed(v); });
     }] forControlEvents:UIControlEventValueChanged];
     [spdSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
-        LOG("speed set %.1f", spdSlider.value);
+        LOG("speed set %.0f", spdSlider.value);
     }] forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
     [sv addSubview:spdSlider];
 
