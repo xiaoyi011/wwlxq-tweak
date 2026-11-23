@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <time.h>
+#include <dirent.h>
 #include <android/log.h>
 
 #define TAG "AWJ"
@@ -257,9 +259,32 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     return JNI_VERSION_1_6;
 }
 
+static int unity_ready(void) {
+    DIR* d = opendir("/proc/self/task");
+    if (!d) return 0;
+    struct dirent* e;
+    int ok = 0;
+    char path[256], buf[64];
+    while ((e = readdir(d)) != NULL) {
+        if (e->d_name[0] == '.') continue;
+        snprintf(path, sizeof(path), "/proc/self/task/%s/comm", e->d_name);
+        FILE* f = fopen(path, "r");
+        if (!f) continue;
+        if (fgets(buf, sizeof(buf), f) && strstr(buf, "UnityMain")) ok = 1;
+        fclose(f);
+        if (ok) break;
+    }
+    closedir(d);
+    return ok;
+}
+
 JNIEXPORT jint JNICALL
 Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
+    static time_t g_ready_at = 0;
+    if (!unity_ready()) { g_ready_at = 0; return -3; }
+    if (g_ready_at == 0) g_ready_at = time(NULL);
+    if (time(NULL) - g_ready_at < 5) return -4;
     if (!resolve_api()) return -1;
     if (!x_domain_get()) return -2;
     return resolve_game() ? 1 : 0;
