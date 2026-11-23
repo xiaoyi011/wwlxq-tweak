@@ -24,9 +24,8 @@ static UIView*   g_awj_panel;
 static void awj_build_ui(void);
 static void gm_call2(int idx, int quiet);
 
-static volatile int g_t_atk = 0;   // 增加攻速（持续）
-static volatile int g_t_sp  = 0;   // 无限银币/SP（持续）
-static volatile int g_t_inv = 0;   // 无敌（持续）
+static volatile int g_t_sp  = 0;   // 无限银币/SP（持续，按钮 0）
+static volatile int g_t_inv = 0;   // 无敌（持续，按钮 1）
 
 #define TAG "[AWJ] "
 static FILE* g_log;
@@ -188,11 +187,9 @@ typedef struct {
 } GmBtn;
 
 static const GmBtn kGmBtns[] = {
-    {"增加攻速",              "OnCheatClick", 0, 0},
     {"无限银币",              "OnSpClick", 0, 0},
     {"无敌",                  "OnSelfInvulnerableStationClick", 0, 0},
     {"停止移动",              "OnStopMonsterMoveClicked", 0, 0},
-    {"战斗信息",              "OnShowBattleInfoClick", 0, 0},
     {"一键失败",              "OnKillSelf", 0, 0},
 };
 
@@ -453,11 +450,10 @@ static void* auto_thread(void* arg) {
             });
         }
         if (g_t_sp) {
-            run_on_main(^{ gm_call2(1, 1); });      // 无限银币
+            run_on_main(^{ gm_call2(0, 1); });      // 无限银币
         }
         if (tick % 4 == 0) {                         // 每 2 秒
-            if (g_t_atk) run_on_main(^{ gm_call2(0, 1); });   // 增加攻速
-            if (g_t_inv) run_on_main(^{ gm_call2(2, 1); });   // 无敌
+            if (g_t_inv) run_on_main(^{ gm_call2(1, 1); });   // 无敌
         }
         usleep(500000);
     }
@@ -719,11 +715,11 @@ static void awj_toggle_panel(void) {
                        dispatch_get_main_queue(), ^{ awj_flash(winBtn); });
     }] forControlEvents:UIControlEventTouchUpInside];
 
-    volatile int* tflags[3] = { &g_t_atk, &g_t_sp, &g_t_inv };
+    volatile int* tflags[2] = { &g_t_sp, &g_t_inv };
 
     for (int i = 0; i < GM_BTN_COUNT; i++) {
         int idx = i;
-        volatile int* flag = (i < 3) ? tflags[i] : NULL;
+        volatile int* flag = (i < 2) ? tflags[i] : NULL;
         UIButton* b = awj_btn([NSString stringWithUTF8String:kGmBtns[i].title], awj_off_color(), ^{});
         b.backgroundColor = (flag && *flag) ? awj_on_color() : awj_off_color();
         place(b);
@@ -772,8 +768,9 @@ static void awj_toggle_panel(void) {
     hpBtn.frame = CGRectMake(192, extraY, 98, 40);
     [sv addSubview:hpBtn];
 
-    NSArray* attrs = @[@"暴击", @"爆伤", @"攻速", @"物理攻击", @"伤害加成",
-                       @"伤害减免", @"最大血量", @"移速", @"命中", @"闪避"];
+    NSArray* attrs = @[@"固定增伤", @"攻速", @"暴击", @"爆伤", @"暴击最终倍率",
+                       @"伤害加成", @"物理攻击", @"物理加成", @"万分比暴击",
+                       @"最终攻击力千分比", @"万分比伤害加成"];
     __block int attrIdx = 0;
     __block UISlider* valSlider = nil;
 
