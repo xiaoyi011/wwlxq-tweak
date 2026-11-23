@@ -693,7 +693,7 @@ static void lic_activate_dialog(UIViewController* vc, void (^done)(BOOL, NSStrin
         tf.autocapitalizationType = UITextAutocapitalizationTypeAllCharacters;
         tf.autocorrectionType = UITextAutocorrectionTypeNo;
     }];
-    [ac addAction:[UIAlertAction actionWithTitle:@"关闭 ✕" style:UIAlertActionStyleCancel handler:nil]];
+    [ac addAction:[UIAlertAction actionWithTitle:@"关闭" style:UIAlertActionStyleCancel handler:nil]];
     [ac addAction:[UIAlertAction actionWithTitle:@"激活" style:UIAlertActionStyleDefault handler:^(UIAlertAction* a){
         NSString* key = [ac.textFields.firstObject.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
         if (key.length == 0) return;
