@@ -687,7 +687,8 @@ static void awj_toggle_panel(void) {
         forControlEvents:UIControlEventTouchUpInside];
     [bar addSubview:xBtn];
 
-    CGFloat listH = hgt - 44;
+    CGFloat footerH = 44;
+    CGFloat listH = hgt - 36 - footerH;
     UIScrollView* sv = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 36, w, listH)];
     sv.showsVerticalScrollIndicator = YES;
     sv.contentSize = CGSizeMake(w, gridRows * 46 + 46 + 6 * 46 + 46 + 8);
@@ -867,6 +868,32 @@ static void awj_toggle_panel(void) {
         run_on_main(^{ exec_cmd([c UTF8String]); });
     }] forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
     [sv addSubview:hpSlider];
+
+    // ---- 卡密区域（预留） ----
+    UIView* footer = [[UIView alloc] initWithFrame:CGRectMake(0, hgt - footerH, w, footerH)];
+    footer.backgroundColor = [UIColor colorWithWhite:0 alpha:0.22];
+    [p addSubview:footer];
+
+    NSString* licExp = [[NSUserDefaults standardUserDefaults] stringForKey:@"awj_license_expire"];
+    UILabel* licLabel = [[UILabel alloc] initWithFrame:CGRectMake(12, 12, w - 104, 20)];
+    licLabel.text = (licExp.length > 0) ? [NSString stringWithFormat:@"卡密到期: %@", licExp]
+                                        : @"卡密到期: 未激活";
+    licLabel.textColor = [UIColor colorWithWhite:0.85 alpha:1];
+    licLabel.font = [UIFont systemFontOfSize:12];
+    licLabel.adjustsFontSizeToFitWidth = YES;
+    licLabel.minimumScaleFactor = 0.7;
+    [footer addSubview:licLabel];
+
+    UIButton* unbindBtn = awj_btn(@"解绑", awj_off_color(), ^{
+        NSUserDefaults* d = [NSUserDefaults standardUserDefaults];
+        [d removeObjectForKey:@"awj_license_key"];
+        [d removeObjectForKey:@"awj_license_expire"];
+        licLabel.text = @"卡密到期: 未激活";
+        LOG("license unbound");
+    });
+    unbindBtn.titleLabel.font = [UIFont boldSystemFontOfSize:13];
+    unbindBtn.frame = CGRectMake(w - 86, 8, 74, 28);
+    [footer addSubview:unbindBtn];
 
     [g_awj_host addSubview:p];
     g_awj_panel = p;
