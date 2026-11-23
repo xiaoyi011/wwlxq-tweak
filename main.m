@@ -735,53 +735,146 @@ static void lic_activate_dialog(UIViewController* vc, void (^done)(BOOL, NSStrin
     lic_activate_dialog2(vc, nil, nil, done);
 }
 
+static UIView*      g_lic_dlg = nil;
+static UITextField* g_lic_tf = nil;
+static UILabel*     g_lic_err = nil;
+static void (^     g_lic_done)(BOOL, NSString*) = nil;
+
+static void lic_close_dialog(void) {
+    if (g_lic_dlg) {
+        if (g_lic_tf) [g_lic_tf resignFirstResponder];
+        [g_lic_dlg removeFromSuperview];
+        g_lic_dlg = nil;
+        g_lic_tf = nil;
+        g_lic_err = nil;
+    }
+}
+
+static void lic_set_error(NSString* msg) {
+    if (!g_lic_err) return;
+    g_lic_err.text = msg.length ? msg : @"";
+    g_lic_err.hidden = (msg.length == 0);
+}
+
+static void lic_do_activate(void) {
+    NSString* key = [g_lic_tf.text stringByTrimmingCharactersInSet:
+                     [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if (key.length == 0) { lic_set_error(@"请输入卡密"); return; }
+    lic_set_error(nil);
+    LOG("activate try");
+    lic_post(@"/api/activate", @{@"key": key, @"device": awj_device_id()}, ^(NSDictionary* r){
+        BOOL ok = [r[@"ok"] boolValue];
+        if (ok) {
+            NSUserDefaults* d = [NSUserDefaults standardUserDefaults];
+            [d setObject:r[@"token"] ?: @"" forKey:@"awj_license_key"];
+            [d setObject:r[@"expire_text"] ?: @"" forKey:@"awj_license_expire"];
+            g_lic_ok = 1;
+            g_lic_exp = r[@"expire_text"];
+            if (r[@"unbind_left"]) g_unbind_left = [r[@"unbind_left"] intValue];
+            lic_heartbeat();
+            LOG("activate ok=1");
+            void (^cb)(BOOL, NSString*) = g_lic_done;
+            lic_close_dialog();
+            g_lic_done = nil;
+            if (cb) cb(YES, nil);
+        } else {
+            NSString* em = r[@"msg"] ?: @"激活失败";
+            LOG("activate ok=0: %s", [em UTF8String]);
+            lic_set_error(em);
+        }
+    });
+}
+
 static void lic_activate_dialog2(UIViewController* vc, NSString* err, NSString* prefill,
                                  void (^done)(BOOL, NSString*)) {
-    if (!vc) return;
-    NSString* title = err.length ? @"卡密错误" : @"输入卡密";
-    NSString* msg = err.length
-        ? [NSString stringWithFormat:@"%@\n正版QQ群：996078023", err]
-        : @"正版QQ群：996078023";
+    (void)vc;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (!g_awj_host) return;
+        if (g_lic_dlg) {
+            if (prefill.length) g_lic_tf.text = prefill;
+            lic_set_error(err);
+            return;
+        }
+        if (done) g_lic_done = done;
 
-    UIAlertController* ac = [UIAlertController alertControllerWithTitle:title
-                                                               message:msg
-                                                        preferredStyle:UIAlertControllerStyleAlert];
-    [ac addTextFieldWithConfigurationHandler:^(UITextField* tf){
+        CGFloat w = 300, h = 226;
+        CGFloat sw = g_awj_host.bounds.size.width;
+        CGFloat sh = g_awj_host.bounds.size.height;
+        UIView* d = [[UIView alloc] initWithFrame:CGRectMake((sw - w) / 2, sh * 0.16f, w, h)];
+        d.backgroundColor = [UIColor colorWithRed:22/255.0 green:35/255.0 blue:58/255.0 alpha:0.98];
+        d.layer.cornerRadius = 14;
+        d.layer.borderWidth = 1;
+        d.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.18].CGColor;
+
+        UILabel* title = [[UILabel alloc] initWithFrame:CGRectMake(0, 12, w, 24)];
+        title.text = @"输入卡密";
+        title.textAlignment = NSTextAlignmentCenter;
+        title.textColor = UIColor.whiteColor;
+        title.font = [UIFont boldSystemFontOfSize:17];
+        [d addSubview:title];
+
+        UITextField* tf = [[UITextField alloc] initWithFrame:CGRectMake(16, 46, w - 32, 38)];
+        tf.backgroundColor = [UIColor colorWithWhite:0.10 alpha:1];
+        tf.textColor = UIColor.whiteColor;
+        tf.tintColor = [UIColor colorWithRed:0.2 green:0.7 blue:0.6 alpha:1];
+        tf.layer.cornerRadius = 8;
+        tf.layer.borderWidth = 1;
+        tf.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.15].CGColor;
+        tf.font = [UIFont systemFontOfSize:14];
         tf.placeholder = @"卡密";
         tf.text = prefill ?: @"";
         tf.autocapitalizationType = UITextAutocapitalizationTypeAllCharacters;
         tf.autocorrectionType = UITextAutocorrectionTypeNo;
-    }];
-    [ac addAction:[UIAlertAction actionWithTitle:@"关闭" style:UIAlertActionStyleCancel handler:nil]];
-    [ac addAction:[UIAlertAction actionWithTitle:@"激活" style:UIAlertActionStyleDefault handler:^(UIAlertAction* a){
-        NSString* key = [ac.textFields.firstObject.text stringByTrimmingCharactersInSet:
-                         [NSCharacterSet whitespaceAndNewlineCharacterSet]];
-        if (key.length == 0) return;
-        LOG("activate try");
-        lic_post(@"/api/activate", @{@"key": key, @"device": awj_device_id()}, ^(NSDictionary* r){
-            BOOL ok = [r[@"ok"] boolValue];
-            if (ok) {
-                NSUserDefaults* d = [NSUserDefaults standardUserDefaults];
-                [d setObject:r[@"token"] ?: @"" forKey:@"awj_license_key"];
-                [d setObject:r[@"expire_text"] ?: @"" forKey:@"awj_license_expire"];
-                g_lic_ok = 1;
-                g_lic_exp = r[@"expire_text"];
-                if (r[@"unbind_left"]) g_unbind_left = [r[@"unbind_left"] intValue];
-                lic_heartbeat();
-                LOG("activate ok=1");
-                done(YES, nil);
-            } else {
-                NSString* em = r[@"msg"] ?: @"激活失败";
-                LOG("activate ok=0: %s", [em UTF8String]);
-                // 卡密错误：重新弹出输入框，页内直接显示错误原因
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.15 * NSEC_PER_SEC)),
-                               dispatch_get_main_queue(), ^{
-                    lic_activate_dialog2(vc, em, key, done);
-                });
-            }
-        });
-    }]];
-    [vc presentViewController:ac animated:YES completion:nil];
+        tf.leftView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 10, 38)];
+        tf.leftViewMode = UITextFieldViewModeAlways;
+        [d addSubview:tf];
+
+        UILabel* errLab = [[UILabel alloc] initWithFrame:CGRectMake(16, 88, w - 32, 16)];
+        errLab.textColor = [UIColor colorWithRed:1.0 green:0.42 blue:0.42 alpha:1];
+        errLab.font = [UIFont systemFontOfSize:12];
+        errLab.text = err ?: @"";
+        errLab.hidden = (err.length == 0);
+        [d addSubview:errLab];
+
+        UILabel* qq = [[UILabel alloc] initWithFrame:CGRectMake(0, 110, w, 18)];
+        qq.text = @"正版QQ群：996078023";
+        qq.textAlignment = NSTextAlignmentCenter;
+        qq.textColor = [UIColor colorWithWhite:0.65 alpha:1];
+        qq.font = [UIFont systemFontOfSize:11];
+        [d addSubview:qq];
+
+        UIButton* closeBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+        closeBtn.frame = CGRectMake(16, 150, 126, 40);
+        closeBtn.backgroundColor = [UIColor colorWithWhite:0.18 alpha:1];
+        [closeBtn setTitle:@"关闭" forState:UIControlStateNormal];
+        [closeBtn setTitleColor:[UIColor colorWithWhite:0.85 alpha:1] forState:UIControlStateNormal];
+        closeBtn.titleLabel.font = [UIFont boldSystemFontOfSize:14];
+        closeBtn.layer.cornerRadius = 8;
+        [closeBtn addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+            void (^cb)(BOOL, NSString*) = g_lic_done;
+            lic_close_dialog();
+            g_lic_done = nil;
+            if (cb) cb(NO, nil);
+        }] forControlEvents:UIControlEventTouchUpInside];
+        [d addSubview:closeBtn];
+
+        UIButton* okBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+        okBtn.frame = CGRectMake(158, 150, 126, 40);
+        okBtn.backgroundColor = [UIColor colorWithRed:31/255.0 green:174/255.0 blue:140/255.0 alpha:1];
+        [okBtn setTitle:@"激活" forState:UIControlStateNormal];
+        [okBtn setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
+        okBtn.titleLabel.font = [UIFont boldSystemFontOfSize:14];
+        okBtn.layer.cornerRadius = 8;
+        [okBtn addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){ lic_do_activate(); }]
+            forControlEvents:UIControlEventTouchUpInside];
+        [d addSubview:okBtn];
+
+        [g_awj_host addSubview:d];
+        g_lic_dlg = d;
+        g_lic_tf = tf;
+        g_lic_err = errLab;
+        [tf becomeFirstResponder];
+    });
 }
 
 static void ensure_resolved(void) {
