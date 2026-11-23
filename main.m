@@ -560,7 +560,7 @@ static void awj_toggle_panel(void) {
 
     CGFloat w = 228;
     CGFloat rowsH = (GM_BTN_COUNT + 3) * 46 + 14;
-    CGFloat hgt = MIN(452, 32 + rowsH + 56);
+    CGFloat hgt = MIN(560, 32 + rowsH + 12);
     UIView* p = [[UIView alloc] initWithFrame:CGRectMake(8, 96, w, hgt)];
     p.backgroundColor = [UIColor colorWithWhite:0.08 alpha:0.94];
     p.layer.cornerRadius = 14;
@@ -568,12 +568,21 @@ static void awj_toggle_panel(void) {
     p.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.25].CGColor;
 
     UILabel* title = [[UILabel alloc] initWithFrame:CGRectMake(12, 6, w-24, 24)];
-    title.text = @"GM 面板";
+    title.text = @"小逸";
     title.textColor = UIColor.whiteColor;
     title.font = [UIFont boldSystemFontOfSize:17];
     [p addSubview:title];
 
-    CGFloat listH = hgt - 88;
+    UIButton* xBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+    xBtn.frame = CGRectMake(w - 38, 4, 32, 30);
+    [xBtn setTitle:@"×" forState:UIControlStateNormal];
+    [xBtn setTitleColor:[UIColor colorWithWhite:0.85 alpha:1] forState:UIControlStateNormal];
+    xBtn.titleLabel.font = [UIFont systemFontOfSize:24 weight:UIFontWeightLight];
+    [xBtn addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){ awj_toggle_panel(); }]
+        forControlEvents:UIControlEventTouchUpInside];
+    [p addSubview:xBtn];
+
+    CGFloat listH = hgt - 62;
     UIScrollView* sv = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 32, w, listH)];
     sv.showsVerticalScrollIndicator = YES;
     sv.contentSize = CGSizeMake(w, (GM_BTN_COUNT + 3) * 46 + 8);
@@ -639,12 +648,6 @@ static void awj_toggle_panel(void) {
     [sv addSubview:spdSlider];
     row++;
 
-    UIButton* close = awj_btn(@"关闭", [UIColor colorWithWhite:0.38 alpha:1], ^{
-        awj_toggle_panel();
-    });
-    close.frame = CGRectMake(10, hgt - 32, w - 20, 26);
-    [p addSubview:close];
-
     [g_awj_host addSubview:p];
     g_awj_panel = p;
 }
@@ -666,7 +669,7 @@ static void awj_build_ui(void) {
     UIButton* ball = [UIButton buttonWithType:UIButtonTypeSystem];
     ball.frame = CGRectMake(sw - 74, 240, 58, 58);
     ball.backgroundColor = [UIColor colorWithRed:0.1 green:0.55 blue:1 alpha:0.9];
-    [ball setTitle:@"GM" forState:UIControlStateNormal];
+    [ball setTitle:@"逸" forState:UIControlStateNormal];
     [ball setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
     ball.titleLabel.font = [UIFont boldSystemFontOfSize:17];
     ball.layer.cornerRadius = 29;
