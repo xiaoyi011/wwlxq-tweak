@@ -526,6 +526,18 @@ static int unity_loaded(void) {
     return 0;
 }
 
+static UIImage* awj_thumb(void) {
+    static UIImage* img = nil;
+    if (img) return img;
+    CGFloat d = 18;
+    UIGraphicsBeginImageContextWithOptions(CGSizeMake(d, d), NO, 0);
+    [[UIColor whiteColor] setFill];
+    [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(0, 0, d, d)] fill];
+    img = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return img;
+}
+
 static void ensure_resolved(void) {
     if (!unity_loaded()) return;
     if (!x_domain_get) resolve_api();
@@ -757,6 +769,8 @@ static void awj_toggle_panel(void) {
     spdSlider.maximumValue = 32.0f;
     spdSlider.value = 1.0f;
     spdSlider.minimumTrackTintColor = [UIColor colorWithRed:0.15 green:0.6 blue:0.5 alpha:1];
+    [spdSlider setThumbImage:awj_thumb() forState:UIControlStateNormal];
+    [spdSlider setThumbImage:awj_thumb() forState:UIControlStateHighlighted];
     [spdSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
         float v = roundf(spdSlider.value);
         if (v < 1) v = 1;
@@ -796,6 +810,8 @@ static void awj_toggle_panel(void) {
         sl.minimumValue = 0;
         sl.maximumValue = 1000;
         sl.minimumTrackTintColor = [UIColor colorWithRed:0.15 green:0.6 blue:0.5 alpha:1];
+        [sl setThumbImage:awj_thumb() forState:UIControlStateNormal];
+        [sl setThumbImage:awj_thumb() forState:UIControlStateHighlighted];
 
         NSString* keepKey = [NSString stringWithFormat:@"awj_attr_%@", name];
         NSUserDefaults* ud = [NSUserDefaults standardUserDefaults];
@@ -837,6 +853,8 @@ static void awj_toggle_panel(void) {
     hpSlider.maximumValue = 100;
     hpSlider.value = 100;
     hpSlider.minimumTrackTintColor = [UIColor colorWithRed:0.75 green:0.45 blue:0.15 alpha:1];
+    [hpSlider setThumbImage:awj_thumb() forState:UIControlStateNormal];
+    [hpSlider setThumbImage:awj_thumb() forState:UIControlStateHighlighted];
     [hpSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
         int pct = (int)roundf(hpSlider.value);
         hpSlider.value = pct;
