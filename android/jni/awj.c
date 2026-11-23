@@ -31,6 +31,7 @@ static void (*x_field_set_value)(void*, void*, void*);
 static void* (*x_runtime_invoke)(void*, void*, void**, void**);
 static void* (*x_string_new)(const char*);
 static void* (*x_thread_attach)(void*);
+static void* (*x_domain_assembly_open)(void*, const char*);
 
 static void* g_lib;
 
@@ -58,6 +59,7 @@ static int resolve_api(void) {
     RESOLVE(x_runtime_invoke, "il2cpp_runtime_invoke");
     RESOLVE(x_string_new, "il2cpp_string_new");
     RESOLVE(x_thread_attach, "il2cpp_thread_attach");
+    RESOLVE(x_domain_assembly_open, "il2cpp_domain_assembly_open");
     return x_domain_get && x_runtime_invoke && x_class_from_name;
 }
 
@@ -91,21 +93,19 @@ static void* class_of(void* image, const char* name) {
 static void* find_image(const char* prefix) {
     void* d = x_domain_get();
     if (!d) return NULL;
-    size_t cnt = 0;
-    LOGI("calling get_assemblies");
-    void** asms = x_domain_get_assemblies(d, &cnt);
-    LOGI("assemblies=%d ptr=%p", (int)cnt, asms);
-    if (!asms) return NULL;
-    void* exact = NULL, *loose = NULL;
-    for (size_t i = 0; i < cnt; i++) {
-        void* img = x_assembly_get_image(asms[i]);
-        if (!img) continue;
-        const char* nm = x_image_get_name(img);
-        if (!nm) continue;
-        if (strcmp(nm, "Assembly-CSharp.dll") == 0) exact = img;
-        else if (!loose && !strstr(nm, "firstpass") && strncmp(nm, prefix, strlen(prefix)) == 0) loose = img;
+    if (x_domain_assembly_open) {
+        LOGI("opening assembly by name");
+        void* a = x_domain_assembly_open(d, "Assembly-CSharp");
+        LOGI("assembly=%p", a);
+        if (a) {
+            void* img = x_assembly_get_image(a);
+            LOGI("image=%p", img);
+            if (img) return img;
+        }
     }
-    return exact ? exact : loose;
+    LOGI("assembly open failed");
+    (void)prefix;
+    return NULL;
 }
 
 static int resolve_game(void) {
