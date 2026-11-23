@@ -53,6 +53,7 @@ static void log_msg(const char* fmt, ...) {
     va_end(ap);
     log_file();
     if (g_log) { fprintf(g_log, TAG "%s\n", buf); fflush(g_log); }
+    NSLog(@"[AWJ] %s", buf);
     ring_add(buf);
 }
 #define LOG(...) log_msg(__VA_ARGS__)
@@ -458,8 +459,16 @@ static UIButton* awj_btn(NSString* title, UIColor* bg, void (^h)(void)) {
     return b;
 }
 
+static void ensure_resolved(void) {
+    if (!x_domain_get) resolve_api();
+    if (!g_m_kill_monster && x_domain_get) resolve_game();
+}
+
 static void awj_toggle_panel(void) {
     if (!g_awj_host) return;
+    ensure_resolved();
+    LOG("panel open ready=%d mask=%u battle=%d", g_m_kill_monster != NULL,
+        g_cls_mask, view() != NULL);
     if (g_awj_panel) {
         [g_awj_panel removeFromSuperview];
         g_awj_panel = nil;
@@ -482,6 +491,8 @@ static void awj_toggle_panel(void) {
     UIButton* autoBtn = nil;
 
     UIButton* b1 = awj_btn(@"清场（秒杀全部怪）", [UIColor colorWithRed:0.75 green:0.2 blue:0.2 alpha:1], ^{
+        ensure_resolved();
+        LOG("tap: clear ready=%d view=%d", g_m_kill_monster != NULL, view() != NULL);
         reply("panel:clear"); run_on_main(^{ do_clear(); });
     });
     b1.frame = CGRectMake(12, 38, w-24, 44);
@@ -494,6 +505,8 @@ static void awj_toggle_panel(void) {
     [p addSubview:b2];
 
     UIButton* b3 = awj_btn(@"直接判胜（3星）", [UIColor colorWithRed:0.2 green:0.6 blue:0.3 alpha:1], ^{
+        ensure_resolved();
+        LOG("tap: win ready=%d view=%d", g_m_kill_monster != NULL, view() != NULL);
         reply("panel:win"); run_on_main(^{ do_win(); });
     });
     b3.frame = CGRectMake(12, 138, w-24, 44);
