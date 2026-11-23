@@ -728,19 +728,34 @@ static void lic_check(void) {
     });
 }
 
+static void lic_activate_dialog2(UIViewController* vc, NSString* err, NSString* prefill,
+                                 void (^done)(BOOL, NSString*));
+
 static void lic_activate_dialog(UIViewController* vc, void (^done)(BOOL, NSString*)) {
+    lic_activate_dialog2(vc, nil, nil, done);
+}
+
+static void lic_activate_dialog2(UIViewController* vc, NSString* err, NSString* prefill,
+                                 void (^done)(BOOL, NSString*)) {
     if (!vc) return;
-    UIAlertController* ac = [UIAlertController alertControllerWithTitle:@"输入卡密"
-                                                               message:@"正版QQ群：996078023"
+    NSString* title = err.length ? @"卡密错误" : @"输入卡密";
+    NSString* msg = err.length
+        ? [NSString stringWithFormat:@"%@\n正版QQ群：996078023", err]
+        : @"正版QQ群：996078023";
+
+    UIAlertController* ac = [UIAlertController alertControllerWithTitle:title
+                                                               message:msg
                                                         preferredStyle:UIAlertControllerStyleAlert];
     [ac addTextFieldWithConfigurationHandler:^(UITextField* tf){
         tf.placeholder = @"卡密";
+        tf.text = prefill ?: @"";
         tf.autocapitalizationType = UITextAutocapitalizationTypeAllCharacters;
         tf.autocorrectionType = UITextAutocorrectionTypeNo;
     }];
     [ac addAction:[UIAlertAction actionWithTitle:@"关闭" style:UIAlertActionStyleCancel handler:nil]];
     [ac addAction:[UIAlertAction actionWithTitle:@"激活" style:UIAlertActionStyleDefault handler:^(UIAlertAction* a){
-        NSString* key = [ac.textFields.firstObject.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        NSString* key = [ac.textFields.firstObject.text stringByTrimmingCharactersInSet:
+                         [NSCharacterSet whitespaceAndNewlineCharacterSet]];
         if (key.length == 0) return;
         LOG("activate try");
         lic_post(@"/api/activate", @{@"key": key, @"device": awj_device_id()}, ^(NSDictionary* r){
@@ -753,9 +768,17 @@ static void lic_activate_dialog(UIViewController* vc, void (^done)(BOOL, NSStrin
                 g_lic_exp = r[@"expire_text"];
                 if (r[@"unbind_left"]) g_unbind_left = [r[@"unbind_left"] intValue];
                 lic_heartbeat();
+                LOG("activate ok=1");
+                done(YES, nil);
+            } else {
+                NSString* em = r[@"msg"] ?: @"激活失败";
+                LOG("activate ok=0: %s", [em UTF8String]);
+                // 卡密错误：重新弹出输入框，页内直接显示错误原因
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.15 * NSEC_PER_SEC)),
+                               dispatch_get_main_queue(), ^{
+                    lic_activate_dialog2(vc, em, key, done);
+                });
             }
-            LOG("activate ok=%d", ok);
-            done(ok, ok ? nil : (r[@"msg"] ?: @"激活失败"));
         });
     }]];
     [vc presentViewController:ac animated:YES completion:nil];
