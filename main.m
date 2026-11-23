@@ -628,6 +628,13 @@ static void lic_heartbeat(void) {
     lic_post(@"/api/heartbeat",
              @{@"token": tok, @"device": awj_device_id(), @"ver": ver, @"hash": hashStr},
              ^(NSDictionary* r){
+        if ([r[@"ok"] boolValue]) {
+            if (!g_lic_ok) LOG("license restored by heartbeat");
+            g_lic_ok = 1;
+            g_lock_msg = nil;
+            g_lock_alerted = 0;
+            return;
+        }
         if (![r[@"ok"] boolValue] && [r[@"lock"] boolValue]) {
             g_lic_ok = 0;
             NSString* msg = r[@"msg"] ?: @"授权已失效";
