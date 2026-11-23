@@ -158,7 +158,8 @@ public final class Launcher {
             curActivity = a;
             String cn = a.getClass().getName();
             if (cn.contains("GameMainActivity")) startInit(cn);
-            ensureBall(a);
+            Window w = a.getWindow();
+            if (w != null) installVolumeKeys(w);
         } catch (Throwable t) {
             logger("attach err " + t);
         }
@@ -256,8 +257,23 @@ public final class Launcher {
                                     && args[0] instanceof KeyEvent) {
                                 KeyEvent e = (KeyEvent) args[0];
                                 if (e.getAction() == KeyEvent.ACTION_DOWN) {
-                                    if (e.getKeyCode() == KeyEvent.KEYCODE_VOLUME_UP) setBallVisible(true);
-                                    else if (e.getKeyCode() == KeyEvent.KEYCODE_VOLUME_DOWN) setBallVisible(false);
+                                    if (e.getKeyCode() == KeyEvent.KEYCODE_VOLUME_UP) {
+                                        logger("volume up");
+                                        H.post(new Runnable() {
+                                            public void run() {
+                                                Activity act = topActivity();
+                                                if (act == null) act = curActivity;
+                                                togglePanel(act);
+                                            }
+                                        });
+                                        return Boolean.TRUE;
+                                    } else if (e.getKeyCode() == KeyEvent.KEYCODE_VOLUME_DOWN) {
+                                        logger("volume down");
+                                        H.post(new Runnable() {
+                                            public void run() { closePanel(); }
+                                        });
+                                        return Boolean.TRUE;
+                                    }
                                 }
                             }
                             try { return m.invoke(orig, args); }
