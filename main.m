@@ -126,6 +126,9 @@ static void* g_m_is_pvp;           // BattleProxy.IsPvp()
 static void* g_level_field;        // BaseViewExtend.battleLevelProxy (static)
 static void* g_maxround_field;     // BattleLevelProxy.maxRound
 static void* g_round_field;        // BattlePvpProxy.round
+static void* g_ls_field;           // BaseViewExtend.battleLockStepCtrl (static)
+static void* g_m_set_speed;        // BattleLockStepCtrl.SetSpeedUpRate(float)
+static void* g_maxframes_field;    // BattleLockStepCtrl.maxLogicFramesPerTick
 static void* g_m_get_entity;       // BattleEntityProxy.GetEntity
 static void* g_proxy_field;        // BattleReduceHpCtrl.battleEntityProxy
 static size_t g_proxy_offset;
@@ -239,6 +242,13 @@ static int resolve_game(void) {
         g_bproxy_field = x_class_get_field_from_name(bpp, "battleProxy");
     }
     if (bp) g_m_is_pvp = x_class_get_method_from_name(bp, "IsPvp", 0);
+
+    void* lsc = class_of(g_image, "BattleLockStepCtrl");
+    if (bve) g_ls_field = x_class_get_field_from_name(bve, "battleLockStepCtrl");
+    if (lsc) {
+        g_m_set_speed = x_class_get_method_from_name(lsc, "SetSpeedUpRate", 1);
+        g_maxframes_field = x_class_get_field_from_name(lsc, "maxLogicFramesPerTick");
+    }
 
     void* blp = class_of(g_image, "BattleLevelProxy");
     if (bve) g_level_field = x_class_get_field_from_name(bve, "battleLevelProxy");
@@ -519,6 +529,25 @@ static void gm_call(int idx) {
     LOG("gm: %s exc=%d", kGmBtns[idx].method, exc != NULL);
 }
 
+static void do_set_speed(float rate) {
+    if (rate <= 0) rate = 1;
+    if (!g_ls_field || !g_m_set_speed) { LOG("speed: missing api"); return; }
+    void* ls = NULL;
+    x_field_static_get_value(g_ls_field, &ls);
+    if (!ls) { LOG("speed: no lockstep ctrl"); return; }
+    float r = rate;
+    void* params[1] = { &r };
+    void* exc = NULL;
+    x_runtime_invoke(g_m_set_speed, ls, params, &exc);
+    if (g_maxframes_field && x_field_set_value) {
+        int32_t mf = (int)(rate * 8);
+        if (mf < 8) mf = 8;
+        if (mf > 64) mf = 64;
+        x_field_set_value(ls, g_maxframes_field, &mf);
+    }
+    LOG("speed: %.2f exc=%d", rate, exc != NULL);
+}
+
 static void awj_toggle_panel(void) {
     if (!g_awj_host) return;
     ensure_resolved();
@@ -530,7 +559,7 @@ static void awj_toggle_panel(void) {
     }
 
     CGFloat w = 228;
-    CGFloat rowsH = (GM_BTN_COUNT + 2) * 46 + 14;
+    CGFloat rowsH = (GM_BTN_COUNT + 3) * 46 + 14;
     CGFloat hgt = MIN(452, 32 + rowsH + 56);
     UIView* p = [[UIView alloc] initWithFrame:CGRectMake(8, 96, w, hgt)];
     p.backgroundColor = [UIColor colorWithWhite:0.08 alpha:0.94];
@@ -547,7 +576,7 @@ static void awj_toggle_panel(void) {
     CGFloat listH = hgt - 88;
     UIScrollView* sv = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 32, w, listH)];
     sv.showsVerticalScrollIndicator = YES;
-    sv.contentSize = CGSizeMake(w, (GM_BTN_COUNT + 2) * 46 + 8);
+    sv.contentSize = CGSizeMake(w, (GM_BTN_COUNT + 3) * 46 + 8);
     [p addSubview:sv];
 
     int row = 0;
@@ -586,6 +615,27 @@ static void awj_toggle_panel(void) {
         row++;
         [sv addSubview:b];
     }
+
+    // 自定义加速
+    UITextField* speedField = [[UITextField alloc] initWithFrame:CGRectMake(10, 6 + row * 46, 86, 40)];
+    speedField.backgroundColor = [UIColor colorWithWhite:0.16 alpha:1];
+    speedField.textColor = UIColor.whiteColor;
+    speedField.textAlignment = NSTextAlignmentCenter;
+    speedField.keyboardType = UIKeyboardTypeDecimalPad;
+    speedField.layer.cornerRadius = 8;
+    speedField.text = @"8";
+    speedField.font = [UIFont boldSystemFontOfSize:15];
+    [sv addSubview:speedField];
+
+    UIButton* speedBtn = awj_btn(@"应用自定义加速", [UIColor colorWithRed:0.15 green:0.5 blue:0.45 alpha:1], ^{
+        float r = speedField.text.floatValue;
+        if (r <= 0) r = 1;
+        LOG("tap: speed %.2f", r);
+        run_on_main(^{ do_set_speed(r); });
+    });
+    speedBtn.frame = CGRectMake(104, 6 + row * 46, w - 114, 40);
+    [sv addSubview:speedBtn];
+    row++;
 
     UILabel* st = [[UILabel alloc] initWithFrame:CGRectMake(12, hgt - 52, w - 24, 18)];
     st.text = [NSString stringWithFormat:@"ready=%d battle=%d",
