@@ -90,8 +90,11 @@ static void* class_of(void* image, const char* name) {
     return x_class_from_name(image, "Game.Bussiness", name);
 }
 
+static void* g_domain;
+
 static void* find_image(const char* prefix) {
-    void* d = x_domain_get();
+    void* d = g_domain;
+    LOGI("find_image d=%p", d);
     if (!d) return NULL;
     if (x_domain_assembly_open) {
         LOGI("opening assembly by name");
@@ -296,7 +299,8 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
     LOGI("api ok");
     void* dom = x_domain_get();
     if (!dom) { LOGE("domain null"); return -2; }
-    LOGI("domain ok");
+    LOGI("domain ok %p", dom);
+    g_domain = dom;
     if (x_thread_attach) { x_thread_attach(dom); LOGI("thread attached"); }
     int r = resolve_game() ? 1 : 0;
     LOGI("game resolve r=%d", r);
