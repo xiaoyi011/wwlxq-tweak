@@ -639,13 +639,6 @@ static void awj_toggle_panel(void) {
     [sv addSubview:spdSlider];
     row++;
 
-    UILabel* st = [[UILabel alloc] initWithFrame:CGRectMake(12, hgt - 52, w - 24, 18)];
-    st.text = [NSString stringWithFormat:@"ready=%d battle=%d",
-               g_m_kill_monster != NULL, view() != NULL];
-    st.textColor = [UIColor colorWithWhite:0.8 alpha:1];
-    st.font = [UIFont systemFontOfSize:11];
-    [p addSubview:st];
-
     UIButton* close = awj_btn(@"关闭", [UIColor colorWithWhite:0.38 alpha:1], ^{
         awj_toggle_panel();
     });
