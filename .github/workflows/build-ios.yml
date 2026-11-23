@@ -35,6 +35,9 @@ jobs:
             -Wl,-undefined,dynamic_lookup \
             -framework UIKit -framework Foundation \
             -o awj.dylib main.m
+          STRIP=$(command -v llvm-strip || ls /usr/lib/llvm-*/bin/llvm-strip 2>/dev/null | head -1)
+          echo "stripping with: $STRIP"
+          if [ -n "$STRIP" ]; then "$STRIP" -x awj.dylib || true; fi
           file awj.dylib
           ls -l awj.dylib
 
