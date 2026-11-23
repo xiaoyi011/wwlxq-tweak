@@ -645,7 +645,7 @@ static void awj_toggle_panel(void) {
     CGFloat w = 300;
     int gridItems = GM_BTN_COUNT + 2;
     int gridRows = (gridItems + 1) / 2;
-    CGFloat rowsH = gridRows * 46 + 46 + 6 * 46 + 66 + 14;
+    CGFloat rowsH = gridRows * 46 + 46 + 6 * 46 + 46 + 14;
     CGFloat hgt = MIN(640, 44 + rowsH);
     CGFloat sw = g_awj_host.bounds.size.width;
     CGFloat sh = g_awj_host.bounds.size.height;
@@ -679,7 +679,7 @@ static void awj_toggle_panel(void) {
     CGFloat listH = hgt - 44;
     UIScrollView* sv = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 36, w, listH)];
     sv.showsVerticalScrollIndicator = YES;
-    sv.contentSize = CGSizeMake(w, gridRows * 46 + 46 + 6 * 46 + 66 + 8);
+    sv.contentSize = CGSizeMake(w, gridRows * 46 + 46 + 6 * 46 + 46 + 8);
     [p addSubview:sv];
 
     __block int gr = 0, gc = 0;
@@ -746,29 +746,30 @@ static void awj_toggle_panel(void) {
     // ---- 命令输入行 ----
     CGFloat extraY = 6 + gr * 46;
 
-    UILabel* hpLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, extraY, w - 20, 18)];
-    hpLabel.text = @"怪物血量: 100%";
-    hpLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
-    hpLabel.font = [UIFont boldSystemFontOfSize:13];
-    [sv addSubview:hpLabel];
+    // 加速滑条（第 7 项）
+    UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, extraY, w - 20, 18)];
+    spdLabel.text = @"加速: 1x";
+    spdLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
+    spdLabel.font = [UIFont boldSystemFontOfSize:13];
+    [sv addSubview:spdLabel];
 
-    UISlider* hpSlider = [[UISlider alloc] initWithFrame:CGRectMake(10, extraY + 22, w - 20, 20)];
-    hpSlider.minimumValue = 1;
-    hpSlider.maximumValue = 100;
-    hpSlider.value = 100;
-    hpSlider.minimumTrackTintColor = [UIColor colorWithRed:0.75 green:0.45 blue:0.15 alpha:1];
-    [hpSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
-        int pct = (int)roundf(hpSlider.value);
-        hpSlider.value = pct;
-        hpLabel.text = [NSString stringWithFormat:@"怪物血量: %d%%", pct];
+    UISlider* spdSlider = [[UISlider alloc] initWithFrame:CGRectMake(10, extraY + 22, w - 20, 20)];
+    spdSlider.minimumValue = 1.0f;
+    spdSlider.maximumValue = 32.0f;
+    spdSlider.value = 1.0f;
+    spdSlider.minimumTrackTintColor = [UIColor colorWithRed:0.15 green:0.6 blue:0.5 alpha:1];
+    [spdSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+        float v = roundf(spdSlider.value);
+        if (v < 1) v = 1;
+        if (v > 32) v = 32;
+        spdSlider.value = v;
+        spdLabel.text = [NSString stringWithFormat:@"加速: %.0fx", v];
+        run_on_main(^{ do_set_speed(v); });
     }] forControlEvents:UIControlEventValueChanged];
-    [hpSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
-        int pct = (int)roundf(hpSlider.value);
-        NSString* c = [NSString stringWithFormat:@"设置怪物血量百分比 %d", pct];
-        LOG("cmd hp %d", pct);
-        run_on_main(^{ exec_cmd([c UTF8String]); });
+    [spdSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+        LOG("speed set %.0f", spdSlider.value);
     }] forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
-    [sv addSubview:hpSlider];
+    [sv addSubview:spdSlider];
 
     NSArray* attrs = @[@"暴击", @"爆伤", @"伤害加成", @"最终攻击力千分比",
                        @"物理攻击", @"攻速"];
@@ -812,31 +813,31 @@ static void awj_toggle_panel(void) {
         [sv addSubview:sl];
     }
 
-    // 自定义加速滑条 1x - 32x
-    CGFloat sliderTop = extraY + 46 + (CGFloat)attrs.count * 46 + 4;
-    UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, sliderTop, w - 20, 18)];
-    spdLabel.text = @"加速: 1x";
-    spdLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
-    spdLabel.font = [UIFont boldSystemFontOfSize:13];
-    [sv addSubview:spdLabel];
+    // 怪物血量滑条（放到最下面）
+    CGFloat hy = extraY + 46 + (CGFloat)attrs.count * 46 + 8;
+    UILabel* hpLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, hy, w - 20, 18)];
+    hpLabel.text = @"怪物血量: 100%";
+    hpLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
+    hpLabel.font = [UIFont boldSystemFontOfSize:13];
+    [sv addSubview:hpLabel];
 
-    UISlider* spdSlider = [[UISlider alloc] initWithFrame:CGRectMake(10, sliderTop + 22, w - 20, 20)];
-    spdSlider.minimumValue = 1.0f;
-    spdSlider.maximumValue = 32.0f;
-    spdSlider.value = 1.0f;
-    spdSlider.minimumTrackTintColor = [UIColor colorWithRed:0.15 green:0.6 blue:0.5 alpha:1];
-    [spdSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
-        float v = roundf(spdSlider.value);
-        if (v < 1) v = 1;
-        if (v > 32) v = 32;
-        spdSlider.value = v;
-        spdLabel.text = [NSString stringWithFormat:@"加速: %.0fx", v];
-        run_on_main(^{ do_set_speed(v); });
+    UISlider* hpSlider = [[UISlider alloc] initWithFrame:CGRectMake(10, hy + 22, w - 20, 20)];
+    hpSlider.minimumValue = 1;
+    hpSlider.maximumValue = 100;
+    hpSlider.value = 100;
+    hpSlider.minimumTrackTintColor = [UIColor colorWithRed:0.75 green:0.45 blue:0.15 alpha:1];
+    [hpSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+        int pct = (int)roundf(hpSlider.value);
+        hpSlider.value = pct;
+        hpLabel.text = [NSString stringWithFormat:@"怪物血量: %d%%", pct];
     }] forControlEvents:UIControlEventValueChanged];
-    [spdSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
-        LOG("speed set %.0f", spdSlider.value);
+    [hpSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+        int pct = (int)roundf(hpSlider.value);
+        NSString* c = [NSString stringWithFormat:@"设置怪物血量百分比 %d", pct];
+        LOG("cmd hp %d", pct);
+        run_on_main(^{ exec_cmd([c UTF8String]); });
     }] forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
-    [sv addSubview:spdSlider];
+    [sv addSubview:hpSlider];
 
     [g_awj_host addSubview:p];
     g_awj_panel = p;
