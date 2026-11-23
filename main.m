@@ -644,6 +644,11 @@ static void lic_heartbeat(void) {
             if (!g_lock_alerted) {
                 g_lock_alerted = 1;
                 dispatch_async(dispatch_get_main_queue(), ^{
+                    // 关闭已打开的面板，停掉所有持续功能
+                    if (g_awj_panel) { [g_awj_panel removeFromSuperview]; g_awj_panel = nil; }
+                    g_auto = 0;
+                    g_t_sp = 0;
+                    g_t_inv = 0;
                     UIViewController* vc = g_awj_host.rootViewController;
                     if (!vc) return;
                     UIAlertController* ac = [UIAlertController alertControllerWithTitle:@"提示"
@@ -672,6 +677,7 @@ static void lic_check(void) {
             [d setObject:g_lic_exp ?: @"" forKey:@"awj_license_expire"];
         } else {
             g_lic_ok = 0;
+            g_lock_msg = r[@"msg"] ?: @"授权已失效，请重新激活";
         }
         LOG("license check ok=%d", g_lic_ok);
     });
