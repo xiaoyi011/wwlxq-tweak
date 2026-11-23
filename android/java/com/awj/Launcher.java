@@ -254,29 +254,43 @@ public final class Launcher {
     }
 
     // ---------------- 面板 ----------------
+    static android.app.Dialog panelDlg;
+
     static void togglePanel(final Activity a) {
         H.post(new Runnable() {
             public void run() {
-                if (panel != null) {
-                    ViewGroup parent = (ViewGroup) panel.getParent();
-                    if (parent != null) parent.removeView(panel);
+                if (panelDlg != null) {
+                    try { panelDlg.dismiss(); } catch (Throwable ignored) {}
+                    panelDlg = null;
                     panel = null;
                     return;
                 }
-                if (a == null || a.getWindow() == null) return;
-                final FrameLayout root = (FrameLayout) a.getWindow().getDecorView();
+                if (a == null || a.isFinishing()) return;
                 panel = buildPanel(a);
-                root.addView(panel);
+                try {
+                    android.app.Dialog d = new android.app.Dialog(a, android.R.style.Theme_Translucent_NoTitleBar);
+                    d.setContentView(panel);
+                    android.view.Window w = d.getWindow();
+                    if (w != null) {
+                        w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+                        w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+                    }
+                    d.show();
+                    panelDlg = d;
+                    logger("panel shown");
+                } catch (Throwable t) {
+                    logger("panel err " + t);
+                }
             }
         });
     }
 
     static void closePanel() {
-        if (panel != null) {
-            ViewGroup parent = (ViewGroup) panel.getParent();
-            if (parent != null) parent.removeView(panel);
-            panel = null;
+        if (panelDlg != null) {
+            try { panelDlg.dismiss(); } catch (Throwable ignored) {}
+            panelDlg = null;
         }
+        panel = null;
     }
 
     static TextView mkBtn(String text, int color) {
