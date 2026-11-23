@@ -593,9 +593,11 @@ static void awj_toggle_panel(void) {
         return;
     }
 
-    CGFloat w = 228;
-    CGFloat rowsH = (GM_BTN_COUNT + 3) * 46 + 14;
-    CGFloat hgt = MIN(560, 44 + rowsH);
+    CGFloat w = 300;
+    int gridItems = GM_BTN_COUNT + 2;
+    int gridRows = (gridItems + 1) / 2;
+    CGFloat rowsH = gridRows * 46 + 66 + 14;
+    CGFloat hgt = MIN(600, 44 + rowsH);
     CGFloat sw = g_awj_host.bounds.size.width;
     CGFloat sh = g_awj_host.bounds.size.height;
 
@@ -628,16 +630,24 @@ static void awj_toggle_panel(void) {
     CGFloat listH = hgt - 44;
     UIScrollView* sv = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 36, w, listH)];
     sv.showsVerticalScrollIndicator = YES;
-    sv.contentSize = CGSizeMake(w, (GM_BTN_COUNT + 3) * 46 + 8);
+    sv.contentSize = CGSizeMake(w, gridRows * 46 + 66 + 8);
     [p addSubview:sv];
 
-    int row = 0;
+    __block int gr = 0, gc = 0;
+    CGFloat bw = (w - 28) / 2.0f;
+    void (^place)(UIButton*) = ^(UIButton* b){
+        b.titleLabel.font = [UIFont boldSystemFontOfSize:14];
+        b.titleLabel.adjustsFontSizeToFitWidth = YES;
+        b.titleLabel.minimumScaleFactor = 0.75;
+        b.frame = CGRectMake(10 + gc * (bw + 8), 6 + gr * 46, bw, 40);
+        gc++;
+        if (gc == 2) { gc = 0; gr++; }
+        [sv addSubview:b];
+    };
 
     UIButton* autoBtn = awj_btn(@"自动清场", awj_off_color(), ^{});
     autoBtn.backgroundColor = g_auto ? awj_on_color() : awj_off_color();
-    autoBtn.frame = CGRectMake(10, 6 + row * 46, w - 20, 40);
-    row++;
-    [sv addSubview:autoBtn];
+    place(autoBtn);
     [autoBtn addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
         g_auto = !g_auto;
         autoBtn.backgroundColor = g_auto ? awj_on_color() : awj_off_color();
@@ -650,9 +660,7 @@ static void awj_toggle_panel(void) {
         run_on_main(^{ do_win(); });
     });
     winBtn.backgroundColor = awj_off_color();
-    winBtn.frame = CGRectMake(10, 6 + row * 46, w - 20, 40);
-    row++;
-    [sv addSubview:winBtn];
+    place(winBtn);
     [winBtn addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.05 * NSEC_PER_SEC)),
                        dispatch_get_main_queue(), ^{ awj_flash(winBtn); });
@@ -665,9 +673,7 @@ static void awj_toggle_panel(void) {
             run_on_main(^{ gm_call(idx); });
         });
         b.backgroundColor = awj_off_color();
-        b.frame = CGRectMake(10, 6 + row * 46, w - 20, 40);
-        row++;
-        [sv addSubview:b];
+        place(b);
         [b addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.05 * NSEC_PER_SEC)),
                            dispatch_get_main_queue(), ^{ awj_flash(b); });
@@ -675,13 +681,14 @@ static void awj_toggle_panel(void) {
     }
 
     // 自定义加速滑条 1x - 32x
-    UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, 4 + row * 46, w - 20, 18)];
+    CGFloat sliderTop = 6 + gr * 46 + 4;
+    UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, sliderTop, w - 20, 18)];
     spdLabel.text = @"加速: 1.0x";
     spdLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
     spdLabel.font = [UIFont boldSystemFontOfSize:13];
     [sv addSubview:spdLabel];
 
-    UISlider* spdSlider = [[UISlider alloc] initWithFrame:CGRectMake(10, 24 + row * 46, w - 20, 20)];
+    UISlider* spdSlider = [[UISlider alloc] initWithFrame:CGRectMake(10, sliderTop + 22, w - 20, 20)];
     spdSlider.minimumValue = 1.0f;
     spdSlider.maximumValue = 32.0f;
     spdSlider.value = 1.0f;
@@ -695,7 +702,6 @@ static void awj_toggle_panel(void) {
         LOG("speed set %.1f", spdSlider.value);
     }] forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
     [sv addSubview:spdSlider];
-    row++;
 
     [g_awj_host addSubview:p];
     g_awj_panel = p;
