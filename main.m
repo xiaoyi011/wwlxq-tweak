@@ -19,6 +19,9 @@
 #define RTLD_NOLOAD 0x10
 #endif
 
+static UIWindow* g_awj_window;
+static void awj_build_ui(void);
+
 #define TAG "[AWJ] "
 static FILE* g_log;
 static void log_file(void) {
@@ -276,6 +279,16 @@ static void handle(const char* cmd) {
     else if (!strcmp(cmd, "i")) {
         reply(g_img_hint[0] ? g_img_hint : "no-csharp-image");
     }
+    else if (!strcmp(cmd, "u1")) {
+        dispatch_async(dispatch_get_main_queue(), ^{ awj_build_ui(); });
+        reply("ok:ui1");
+    }
+    else if (!strcmp(cmd, "u0")) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (g_awj_window) { g_awj_window.hidden = YES; }
+        });
+        reply("ok:ui0");
+    }
     else if (!strcmp(cmd, "l")) {
         char b[300];
         b[0] = 0;
@@ -351,7 +364,6 @@ static void* udp_thread(void* arg) {
 }
 @end
 
-static UIWindow* g_awj_window;
 static UIView*   g_awj_panel;
 
 static UIWindowScene* awj_scene(void) {
@@ -484,6 +496,7 @@ static void awj_init(void) {
     pthread_create(&t, NULL, udp_thread, NULL);
     pthread_create(&t, NULL, auto_thread, NULL);
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
+        usleep(15 * 1000000);   // 等游戏加载完再建窗口，避免挡住启动阶段触摸
         for (int i = 0; i < 600 && !g_awj_window; i++) {
             dispatch_async(dispatch_get_main_queue(), ^{ awj_build_ui(); });
             usleep(500000);
