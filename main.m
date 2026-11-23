@@ -746,27 +746,29 @@ static void awj_toggle_panel(void) {
     // ---- 命令输入行 ----
     CGFloat extraY = 6 + gr * 46;
 
-    UITextField* hpField = [[UITextField alloc] initWithFrame:CGRectMake(10, extraY, 176, 40)];
-    hpField.backgroundColor = awj_off_color();
-    hpField.textColor = UIColor.whiteColor;
-    hpField.textAlignment = NSTextAlignmentCenter;
-    hpField.keyboardType = UIKeyboardTypeNumberPad;
-    hpField.layer.cornerRadius = 8;
-    hpField.font = [UIFont systemFontOfSize:13];
-    hpField.placeholder = @"怪物血量百分比 1-100";
-    [sv addSubview:hpField];
+    UILabel* hpLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, extraY, w - 20, 18)];
+    hpLabel.text = @"怪物血量: 100%";
+    hpLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
+    hpLabel.font = [UIFont boldSystemFontOfSize:13];
+    [sv addSubview:hpLabel];
 
-    UIButton* hpBtn = awj_btn(@"应用血量%", awj_off_color(), ^{
-        int pct = hpField.text.intValue;
-        if (pct <= 0 || pct > 100) { LOG("hp pct invalid"); return; }
+    UISlider* hpSlider = [[UISlider alloc] initWithFrame:CGRectMake(10, extraY + 22, w - 20, 20)];
+    hpSlider.minimumValue = 1;
+    hpSlider.maximumValue = 100;
+    hpSlider.value = 100;
+    hpSlider.minimumTrackTintColor = [UIColor colorWithRed:0.75 green:0.45 blue:0.15 alpha:1];
+    [hpSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+        int pct = (int)roundf(hpSlider.value);
+        hpSlider.value = pct;
+        hpLabel.text = [NSString stringWithFormat:@"怪物血量: %d%%", pct];
+    }] forControlEvents:UIControlEventValueChanged];
+    [hpSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+        int pct = (int)roundf(hpSlider.value);
         NSString* c = [NSString stringWithFormat:@"设置怪物血量百分比 %d", pct];
         LOG("cmd hp %d", pct);
         run_on_main(^{ exec_cmd([c UTF8String]); });
-    });
-    hpBtn.titleLabel.adjustsFontSizeToFitWidth = YES;
-    hpBtn.titleLabel.minimumScaleFactor = 0.7;
-    hpBtn.frame = CGRectMake(192, extraY, 98, 40);
-    [sv addSubview:hpBtn];
+    }] forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
+    [sv addSubview:hpSlider];
 
     NSArray* attrs = @[@"固定增伤", @"攻速", @"暴击", @"爆伤", @"暴击最终倍率",
                        @"伤害加成", @"物理攻击", @"物理加成", @"万分比暴击",
