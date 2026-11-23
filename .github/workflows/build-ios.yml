@@ -33,7 +33,7 @@ jobs:
           clang -target arm64-apple-ios14.0 -isysroot "$SDK" \
             -fuse-ld=lld -fblocks -fobjc-arc -O2 -dynamiclib \
             -Wl,-undefined,dynamic_lookup -Wl,-x \
-            -framework UIKit -framework Foundation \
+            -framework UIKit -framework Foundation -framework AVFoundation \
             -o awj.dylib main.m
           STRIP=$(command -v llvm-strip || ls /usr/lib/llvm-*/bin/llvm-strip 2>/dev/null | head -1)
           echo "stripping with: $STRIP"
