@@ -129,6 +129,7 @@ static void* g_round_field;        // BattlePvpProxy.round
 static void* g_ls_field;           // BaseViewExtend.battleLockStepCtrl (static)
 static void* g_m_set_speed;        // BattleLockStepCtrl.SetSpeedUpRate(float)
 static void* g_maxframes_field;    // BattleLockStepCtrl.maxLogicFramesPerTick
+static void* g_speed_field;        // BattleLockStepCtrl.speedUpRate
 static void* g_m_get_entity;       // BattleEntityProxy.GetEntity
 static void* g_proxy_field;        // BattleReduceHpCtrl.battleEntityProxy
 static size_t g_proxy_offset;
@@ -247,7 +248,10 @@ static int resolve_game(void) {
     if (lsc) {
         g_m_set_speed = x_class_get_method_from_name(lsc, "SetSpeedUpRate", 1);
         g_maxframes_field = x_class_get_field_from_name(lsc, "maxLogicFramesPerTick");
+        g_speed_field = x_class_get_field_from_name(lsc, "speedUpRate");
     }
+    LOG("speed api: ls=%d m=%d rate=%d max=%d", g_ls_field != NULL,
+        g_m_set_speed != NULL, g_speed_field != NULL, g_maxframes_field != NULL);
 
     void* blp = class_of(g_image, "BattleLevelProxy");
     if (bve) g_level_field = x_class_get_field_from_name(bve, "battleLevelProxy");
@@ -544,7 +548,9 @@ static void do_set_speed(float rate) {
         if (mf > 64) mf = 64;
         x_field_set_value(ls, g_maxframes_field, &mf);
     }
-    if (exc) LOG("speed exc");
+    float back = -1;
+    if (g_speed_field && x_field_get_value) x_field_get_value(ls, g_speed_field, &back);
+    LOG("speed set %.1f -> readback %.1f exc=%d", rate, back, exc != NULL);
 }
 
 // ---- 拖动支持 ----
