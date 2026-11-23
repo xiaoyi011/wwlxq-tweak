@@ -531,7 +531,7 @@ static int unity_loaded(void) {
 static UIImage* awj_thumb(void) {
     static UIImage* img = nil;
     if (img) return img;
-    CGFloat d = 14;
+    CGFloat d = 18;
     UIGraphicsBeginImageContextWithOptions(CGSizeMake(d, d), NO, 0);
     [[UIColor whiteColor] setFill];
     [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(0, 0, d, d)] fill];
