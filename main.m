@@ -189,6 +189,7 @@ static const GmBtn kGmBtns[] = {
     {"无敌",                  "OnSelfInvulnerableStationClick", 0, 0},
     {"停止移动",              "OnStopMonsterMoveClicked", 0, 0},
     {"战斗信息",              "OnShowBattleInfoClick", 0, 0},
+    {"一键失败",              "OnKillSelf", 0, 0},
 };
 
 #define GM_BTN_COUNT ((int)(sizeof(kGmBtns) / sizeof(kGmBtns[0])))
