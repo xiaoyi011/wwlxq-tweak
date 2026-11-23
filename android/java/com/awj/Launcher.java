@@ -529,11 +529,13 @@ public final class Launcher {
         exp.setGravity(Gravity.CENTER_VERTICAL);
         foot.addView(exp, new LinearLayout.LayoutParams(0, dp(36), 1));
         final TextView unbind = mkBtn(unbindLeft >= 0 ? ("解绑(" + unbindLeft + ")") : "解绑", C_BTN);
-        unbind.setTextSize(11);
+        unbind.setTextSize(10);
+        unbind.setPadding(dp(10), 0, dp(10), 0);
         unbind.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { doUnbind(unbind); }
         });
-        foot.addView(unbind, new LinearLayout.LayoutParams(dp(92), dp(30)));
+        foot.addView(unbind, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(28)));
         p.addView(foot);
 
         // 事件绑定
