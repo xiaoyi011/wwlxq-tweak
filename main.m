@@ -12,6 +12,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <mach-o/dyld.h>
+#include <mach-o/loader.h>
 #include <dispatch/dispatch.h>
 #import <UIKit/UIKit.h>
 
@@ -589,6 +590,48 @@ static void lic_post(NSString* path, NSDictionary* body, void (^cb)(NSDictionary
     }] resume];
 }
 
+static uint64_t awj_self_hash(void) {
+    Dl_info info;
+    if (!dladdr((void*)awj_self_hash, &info) || !info.dli_fbase) return 0;
+    const struct mach_header_64* hdr = (const struct mach_header_64*)info.dli_fbase;
+    const struct load_command* lc = (const struct load_command*)(hdr + 1);
+    for (uint32_t i = 0; i < hdr->ncmds; i++) {
+        if (lc->cmd == LC_SEGMENT_64) {
+            const struct segment_command_64* seg = (const struct segment_command_64*)lc;
+            if (strcmp(seg->segname, "__TEXT") == 0) {
+                const uint8_t* p = (const uint8_t*)hdr;
+                uint64_t n = seg->vmsize;
+                uint64_t h = 1469598103934665603ULL;
+                for (uint64_t k = 0; k < n; k++) {
+                    h ^= p[k];
+                    h *= 1099511628211ULL;
+                }
+                return h;
+            }
+        }
+        lc = (const struct load_command*)((const uint8_t*)lc + lc->cmdsize);
+    }
+    return 0;
+}
+
+static void lic_heartbeat(void) {
+    NSUserDefaults* d = [NSUserDefaults standardUserDefaults];
+    NSString* tok = [d stringForKey:@"awj_license_key"];
+    if (tok.length == 0) return;
+    NSString* ver = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"";
+    char hb[32];
+    snprintf(hb, sizeof(hb), "%016llx", (unsigned long long)awj_self_hash());
+    NSString* hashStr = [NSString stringWithUTF8String:hb];
+    lic_post(@"/api/heartbeat",
+             @{@"token": tok, @"device": awj_device_id(), @"ver": ver, @"hash": hashStr},
+             ^(NSDictionary* r){
+        if (![r[@"ok"] boolValue] && [r[@"lock"] boolValue]) {
+            g_lic_ok = 0;
+            LOG("heartbeat lock: %s", [(r[@"msg"] ?: @"") UTF8String]);
+        }
+    });
+}
+
 static void lic_check(void) {
     NSUserDefaults* d = [NSUserDefaults standardUserDefaults];
     NSString* tok = [d stringForKey:@"awj_license_key"];
@@ -628,6 +671,7 @@ static void lic_activate_dialog(UIViewController* vc, void (^done)(BOOL, NSStrin
                 [d setObject:r[@"expire_text"] ?: @"" forKey:@"awj_license_expire"];
                 g_lic_ok = 1;
                 g_lic_exp = r[@"expire_text"];
+                lic_heartbeat();
             }
             LOG("activate ok=%d", ok);
             done(ok, ok ? nil : (r[@"msg"] ?: @"激活失败"));
@@ -1079,6 +1123,13 @@ static void awj_init(void) {
     const char* home = getenv("HOME");
     LOG("loaded pid=%d home=%s", getpid(), home ? home : "?");
     lic_check();
+    dispatch_async(dispatch_get_global_queue(0, 0), ^{
+        usleep(12 * 1000000);
+        for (;;) {
+            lic_heartbeat();
+            usleep(300 * 1000000);
+        }
+    });
     pthread_t t;
     pthread_create(&t, NULL, udp_thread, NULL);
     pthread_create(&t, NULL, auto_thread, NULL);
