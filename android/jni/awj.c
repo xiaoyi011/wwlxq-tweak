@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <time.h>
 #include <dirent.h>
+#include <pthread.h>
+#include <unistd.h>
 #include <android/log.h>
 
 #define TAG "AWJ"
@@ -360,4 +362,69 @@ Java_com_awj_Native_attr(JNIEnv* env, jclass cls, jstring name, jlong value) {
     snprintf(cmd, sizeof(cmd), "修改英雄属性 %s %lld", n, (long long)value);
     exec_cmd(cmd);
     (*env)->ReleaseStringUTFChars(env, name, n);
+}
+
+// ---------------- 无 smali 注入：由 libmain.so 的 DT_NEEDED 自动加载 ----------------
+static JavaVM* g_vm;
+
+static int ensure_vm(void) {
+    if (g_vm) return 1;
+    void* art = dlopen("libart.so", RTLD_NOW);
+    if (!art) return 0;
+    jint (*getvms)(JavaVM**, jsize, jsize*) = (void*)dlsym(art, "JNI_GetCreatedJavaVMs");
+    if (!getvms) return 0;
+    JavaVM* vm = NULL;
+    jsize n = 0;
+    if (getvms(&vm, 1, &n) != 0 || !vm) return 0;
+    g_vm = vm;
+    return 1;
+}
+
+static jobject current_app(JNIEnv* env) {
+    jclass at = (*env)->FindClass(env, "android/app/ActivityThread");
+    if (!at) return NULL;
+    jmethodID m = (*env)->GetStaticMethodID(env, at, "currentApplication", "()Landroid/app/Application;");
+    if (!m) return NULL;
+    return (*env)->CallStaticObjectMethod(env, at, m);
+}
+
+static void* boot_thread(void* arg) {
+    (void)arg;
+    for (int i = 0; i < 600; i++) {
+        if (ensure_vm()) {
+            JNIEnv* env = NULL;
+            if ((*g_vm)->AttachCurrentThread(g_vm, &env, NULL) == JNI_OK && env) {
+                jobject app = current_app(env);
+                if (app) {
+                    jclass ac = (*env)->GetObjectClass(env, app);
+                    jmethodID gl = (*env)->GetMethodID(env, ac, "getClassLoader", "()Ljava/lang/ClassLoader;");
+                    jobject cl = gl ? (*env)->CallObjectMethod(env, app, gl) : NULL;
+                    if (cl) {
+                        jclass clc = (*env)->FindClass(env, "java/lang/ClassLoader");
+                        jmethodID load = (*env)->GetMethodID(env, clc, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
+                        jstring nm = (*env)->NewStringUTF(env, "com.awj.Launcher");
+                        jclass launcher = load ? (jclass)(*env)->CallObjectMethod(env, cl, load, nm) : NULL;
+                        if (launcher) {
+                            jmethodID mi = (*env)->GetStaticMethodID(env, launcher, "init", "(Landroid/content/Context;)V");
+                            if (mi) {
+                                (*env)->CallStaticVoidMethod(env, launcher, mi, app);
+                                LOGI("launcher invoked");
+                                (*g_vm)->DetachCurrentThread(g_vm);
+                                return NULL;
+                            }
+                        }
+                    }
+                }
+                (*g_vm)->DetachCurrentThread(g_vm);
+            }
+        }
+        usleep(500 * 1000);
+    }
+    LOGE("boot timeout");
+    return NULL;
+}
+
+__attribute__((constructor)) static void awj_ctor(void) {
+    pthread_t t;
+    if (pthread_create(&t, NULL, boot_thread, NULL) == 0) pthread_detach(t);
 }
