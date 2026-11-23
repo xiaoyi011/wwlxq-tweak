@@ -112,6 +112,7 @@ static int resolve_api(void) {
 
 // ---------------- 游戏对象 ----------------
 static void* g_image;
+static void* g_dv_class;           // BattleDebugActionView 类
 static void* g_main_panel_field;   // BattleDefine.mainPanel (static)
 static void* g_view_field;         // BattleMainPanel.battleDebugActionView
 static size_t g_view_offset;
@@ -165,6 +166,47 @@ static void* find_image(const char* prefix) {
     return exact ? exact : loose;
 }
 
+// ---------------- GM 方法表 ----------------
+typedef struct {
+    const char* title;
+    const char* method;
+    int argc;
+    int arg;
+} GmBtn;
+
+static const GmBtn kGmBtns[] = {
+    {"清场（杀光怪物）",      "OnKillMonster", 0, 0},
+    {"攻击速度 +100000",      "OnCheatClick", 0, 0},
+    {"SP 拉满",               "OnSpClick", 0, 0},
+    {"城墙无敌（双方）",       "OnInvulnerableStationClick", 0, 0},
+    {"城墙无敌（仅我方）",     "OnSelfInvulnerableStationClick", 0, 0},
+    {"2倍/4倍 加速",          "OnSpeedUpClicked", 0, 0},
+    {"暂停刷怪",              "OnPauseGenUnitClicked", 0, 0},
+    {"冻结怪物移动",           "OnStopMonsterMoveClicked", 0, 0},
+    {"点杀模式",              "OnPointKillMonsterClicked", 0, 0},
+    {"禁用角色技能",           "OnDisableRoleSkillClicked", 0, 0},
+    {"解锁所有格子",           "OnUnlockAllGridClick", 0, 0},
+    {"帮助开格",              "OnHelpOpenGridClick", 0, 0},
+    {"手动刷怪",              "OnManualGenUnit", 0, 0},
+    {"PVP 判胜（3星）",       "OnKillRobotClick", 1, 3},
+    {"一键失败",              "OnKillSelf", 0, 0},
+    {"杀己方怪物",            "OnKillSelfMonster", 0, 0},
+    {"杀己方小怪",            "OnKillSelfSmallMonster", 0, 0},
+    {"战斗信息",              "OnShowBattleInfoClick", 0, 0},
+    {"伤害统计",              "OnOpenDamageStatisticsClicked", 0, 0},
+    {"实体信息",              "OnShowEntityTop", 0, 0},
+    {"切换 AI",               "OnOpenAIClick", 0, 0},
+    {"怪物属性",              "OnMonsterAttrClick", 0, 0},
+    {"英雄详情模式",           "OnHeroDetailsModeClick", 0, 0},
+    {"肉鸽调试",              "OnRogueDebugClicked", 0, 0},
+    {"肉鸽无限刷新",           "OnAddRougeRefreshCountClicked", 0, 0},
+    {"肉鸽快速选择",           "OnSingleRogueClick", 0, 0},
+    {"导出战斗录像",           "OnExportBattleReplayClick", 0, 0},
+};
+
+#define GM_BTN_COUNT ((int)(sizeof(kGmBtns) / sizeof(kGmBtns[0])))
+static void* g_gm_fn[GM_BTN_COUNT];
+
 static int g_miss_logged = 0;
 static int g_img_logged = 0;
 static unsigned g_cls_mask = 0;
@@ -208,6 +250,7 @@ static int resolve_game(void) {
     void* m4 = x_class_get_method_from_name(ep, "GetEntity", 1);
     if (!m1 || !m2 || !m3 || !m4) return 0;
     g_m_kill_monster = m1; g_m_cheat = m2; g_m_kill_robot = m3; g_m_get_entity = m4;
+    g_dv_class = dv;
 
     void* bve = class_of(g_image, "BaseViewExtend");
     void* bpp = class_of(g_image, "BattlePvpProxy");
@@ -223,8 +266,13 @@ static int resolve_game(void) {
     if (bve) g_level_field = x_class_get_field_from_name(bve, "battleLevelProxy");
     if (blp) g_maxround_field = x_class_get_field_from_name(blp, "maxRound");
     if (bpp) g_round_field = x_class_get_field_from_name(bpp, "round");
-    LOG("set_result=%d is_pvp=%d bproxy=%d", g_m_set_result != NULL,
-        g_m_is_pvp != NULL, g_bproxy_field != NULL);
+    int gm_ok = 0;
+    for (int i = 0; i < GM_BTN_COUNT; i++) {
+        g_gm_fn[i] = x_class_get_method_from_name(dv, kGmBtns[i].method, kGmBtns[i].argc);
+        if (g_gm_fn[i]) gm_ok++;
+    }
+    LOG("set_result=%d is_pvp=%d gm=%d/%d", g_m_set_result != NULL,
+        g_m_is_pvp != NULL, gm_ok, GM_BTN_COUNT);
 
     LOG("game resolved");
     return 1;
@@ -464,76 +512,103 @@ static void ensure_resolved(void) {
     if (!g_m_kill_monster && x_domain_get) resolve_game();
 }
 
+static void gm_call(int idx) {
+    ensure_resolved();
+    if (!g_gm_fn[idx] && g_dv_class)
+        g_gm_fn[idx] = x_class_get_method_from_name(g_dv_class, kGmBtns[idx].method, kGmBtns[idx].argc);
+    void* v = view();
+    if (!v) { LOG("gm %s: no view", kGmBtns[idx].method); return; }
+    void* fn = g_gm_fn[idx];
+    if (!fn) { LOG("gm %s: missing", kGmBtns[idx].method); return; }
+    void* exc = NULL;
+    if (kGmBtns[idx].argc > 0) {
+        int32_t a = kGmBtns[idx].arg;
+        void* params[1] = { &a };
+        x_runtime_invoke(fn, v, params, &exc);
+    } else {
+        x_runtime_invoke(fn, v, NULL, &exc);
+    }
+    LOG("gm: %s exc=%d", kGmBtns[idx].method, exc != NULL);
+}
+
 static void awj_toggle_panel(void) {
     if (!g_awj_host) return;
     ensure_resolved();
-    LOG("panel open ready=%d mask=%u battle=%d", g_m_kill_monster != NULL,
-        g_cls_mask, view() != NULL);
+    LOG("panel open ready=%d battle=%d", g_m_kill_monster != NULL, view() != NULL);
     if (g_awj_panel) {
         [g_awj_panel removeFromSuperview];
         g_awj_panel = nil;
         return;
     }
 
-    CGFloat w = 200, hgt = 320;
-    UIView* p = [[UIView alloc] initWithFrame:CGRectMake(12, 180, w, hgt)];
-    p.backgroundColor = [UIColor colorWithWhite:0.08 alpha:0.93];
+    CGFloat w = 228, hgt = 452;
+    UIView* p = [[UIView alloc] initWithFrame:CGRectMake(8, 96, w, hgt)];
+    p.backgroundColor = [UIColor colorWithWhite:0.08 alpha:0.94];
     p.layer.cornerRadius = 14;
     p.layer.borderWidth = 1;
     p.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.25].CGColor;
 
-    UILabel* title = [[UILabel alloc] initWithFrame:CGRectMake(12, 8, w-24, 22)];
+    UILabel* title = [[UILabel alloc] initWithFrame:CGRectMake(12, 6, w-24, 24)];
     title.text = @"GM 面板";
     title.textColor = UIColor.whiteColor;
-    title.font = [UIFont boldSystemFontOfSize:16];
+    title.font = [UIFont boldSystemFontOfSize:17];
     [p addSubview:title];
 
-    UIButton* autoBtn = nil;
+    CGFloat listH = hgt - 88;
+    UIScrollView* sv = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 32, w, listH)];
+    sv.showsVerticalScrollIndicator = YES;
+    sv.contentSize = CGSizeMake(w, (GM_BTN_COUNT + 2) * 46 + 8);
+    [p addSubview:sv];
 
-    UIButton* b1 = awj_btn(@"清场（秒杀全部怪）", [UIColor colorWithRed:0.75 green:0.2 blue:0.2 alpha:1], ^{
-        ensure_resolved();
-        LOG("tap: clear ready=%d view=%d", g_m_kill_monster != NULL, view() != NULL);
-        reply("panel:clear"); run_on_main(^{ do_clear(); });
-    });
-    b1.frame = CGRectMake(12, 38, w-24, 44);
-    [p addSubview:b1];
+    int row = 0;
 
-    UIButton* b2 = awj_btn(@"全体攻速 +100000", [UIColor colorWithRed:0.2 green:0.45 blue:0.75 alpha:1], ^{
-        reply("panel:cheat"); run_on_main(^{ do_cheat(); });
-    });
-    b2.frame = CGRectMake(12, 88, w-24, 44);
-    [p addSubview:b2];
-
-    UIButton* b3 = awj_btn(@"直接判胜（3星）", [UIColor colorWithRed:0.2 green:0.6 blue:0.3 alpha:1], ^{
-        ensure_resolved();
-        LOG("tap: win ready=%d view=%d", g_m_kill_monster != NULL, view() != NULL);
-        reply("panel:win"); run_on_main(^{ do_win(); });
-    });
-    b3.frame = CGRectMake(12, 138, w-24, 44);
-    [p addSubview:b3];
-
-    autoBtn = awj_btn(g_auto ? @"自动清场：开" : @"自动清场：关",
-                      [UIColor colorWithWhite:0.28 alpha:1], ^{});
-    autoBtn.frame = CGRectMake(12, 188, w-24, 44);
-    [p addSubview:autoBtn];
+    UIButton* autoBtn = awj_btn(g_auto ? @"自动清场：开" : @"自动清场：关",
+                                [UIColor colorWithWhite:0.30 alpha:1], ^{});
+    autoBtn.frame = CGRectMake(10, 6 + row * 46, w - 20, 40);
+    row++;
+    [sv addSubview:autoBtn];
     [autoBtn addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
         g_auto = !g_auto;
         [autoBtn setTitle:(g_auto ? @"自动清场：开" : @"自动清场：关") forState:UIControlStateNormal];
-        reply(g_auto ? "panel:auto1" : "panel:auto0");
+        LOG("auto=%d", g_auto);
     }] forControlEvents:UIControlEventTouchUpInside];
 
-    UIButton* close = awj_btn(@"关闭", [UIColor colorWithWhite:0.35 alpha:1], ^{
-        awj_toggle_panel();
+    UIButton* winBtn = awj_btn(@"直接判胜（自动模式）",
+                               [UIColor colorWithRed:0.2 green:0.6 blue:0.3 alpha:1], ^{
+        ensure_resolved();
+        LOG("tap: win");
+        run_on_main(^{ do_win(); });
     });
-    close.frame = CGRectMake(12, 238, w-24, 44);
-    [p addSubview:close];
+    winBtn.frame = CGRectMake(10, 6 + row * 46, w - 20, 40);
+    row++;
+    [sv addSubview:winBtn];
 
-    UILabel* st = [[UILabel alloc] initWithFrame:CGRectMake(12, 286, w-24, 20)];
+    for (int i = 0; i < GM_BTN_COUNT; i++) {
+        int idx = i;
+        UIColor* c = (i % 3 == 0) ? [UIColor colorWithRed:0.55 green:0.2 blue:0.2 alpha:1]
+                    : (i % 3 == 1) ? [UIColor colorWithRed:0.2 green:0.35 blue:0.6 alpha:1]
+                                   : [UIColor colorWithWhite:0.22 alpha:1];
+        UIButton* b = awj_btn([NSString stringWithUTF8String:kGmBtns[i].title], c, ^{
+            LOG("tap: %s", kGmBtns[idx].method);
+            run_on_main(^{ gm_call(idx); });
+        });
+        b.frame = CGRectMake(10, 6 + row * 46, w - 20, 40);
+        row++;
+        [sv addSubview:b];
+    }
+
+    UILabel* st = [[UILabel alloc] initWithFrame:CGRectMake(12, hgt - 52, w - 24, 18)];
     st.text = [NSString stringWithFormat:@"ready=%d battle=%d",
                g_m_kill_monster != NULL, view() != NULL];
     st.textColor = [UIColor colorWithWhite:0.8 alpha:1];
     st.font = [UIFont systemFontOfSize:11];
     [p addSubview:st];
+
+    UIButton* close = awj_btn(@"关闭", [UIColor colorWithWhite:0.38 alpha:1], ^{
+        awj_toggle_panel();
+    });
+    close.frame = CGRectMake(10, hgt - 32, w - 20, 26);
+    [p addSubview:close];
 
     [g_awj_host addSubview:p];
     g_awj_panel = p;
