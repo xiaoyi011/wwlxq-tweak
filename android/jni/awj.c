@@ -30,6 +30,7 @@ static void (*x_field_get_value)(void*, void*, void*);
 static void (*x_field_set_value)(void*, void*, void*);
 static void* (*x_runtime_invoke)(void*, void*, void**, void**);
 static void* (*x_string_new)(const char*);
+static void* (*x_thread_attach)(void*);
 
 static void* g_lib;
 
@@ -56,6 +57,7 @@ static int resolve_api(void) {
     RESOLVE(x_field_set_value, "il2cpp_field_set_value");
     RESOLVE(x_runtime_invoke, "il2cpp_runtime_invoke");
     RESOLVE(x_string_new, "il2cpp_string_new");
+    RESOLVE(x_thread_attach, "il2cpp_thread_attach");
     return x_domain_get && x_runtime_invoke && x_class_from_name;
 }
 
@@ -90,7 +92,9 @@ static void* find_image(const char* prefix) {
     void* d = x_domain_get();
     if (!d) return NULL;
     size_t cnt = 0;
+    LOGI("calling get_assemblies");
     void** asms = x_domain_get_assemblies(d, &cnt);
+    LOGI("assemblies=%d ptr=%p", (int)cnt, asms);
     if (!asms) return NULL;
     void* exact = NULL, *loose = NULL;
     for (size_t i = 0; i < cnt; i++) {
@@ -290,8 +294,10 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
     LOGI("resolving api");
     if (!resolve_api()) { LOGE("api resolve failed"); return -1; }
     LOGI("api ok");
-    if (!x_domain_get()) { LOGE("domain null"); return -2; }
-    LOGI("domain ok, resolving game");
+    void* dom = x_domain_get();
+    if (!dom) { LOGE("domain null"); return -2; }
+    LOGI("domain ok");
+    if (x_thread_attach) { x_thread_attach(dom); LOGI("thread attached"); }
     int r = resolve_game() ? 1 : 0;
     LOGI("game resolve r=%d", r);
     return r;
