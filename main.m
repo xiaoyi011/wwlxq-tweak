@@ -77,6 +77,7 @@ static size_t           (*x_field_get_offset)(void*);
 static void             (*x_field_static_get_value)(void*, void*);
 static void             (*x_field_get_value)(void*, void*, void*);
 static void             (*x_field_set_value)(void*, void*, void*);
+static void*            (*x_string_new)(const char*);
 static void*            (*x_runtime_invoke)(void*, void*, void**, void**);
 
 static void* sym(const char* name) {
@@ -138,7 +139,6 @@ static void* g_maxframes_field;    // BattleLockStepCtrl.maxLogicFramesPerTick
 static void* g_speed_field;        // BattleLockStepCtrl.speedUpRate
 static void* g_lua_input_field;    // BattleDebugActionView.luaCodeInput
 static void* g_m_exec_lua;         // BattleDebugActionView.OnExecuteLuaClick
-static void* (*x_string_new)(const char*);
 static void* g_m_get_entity;       // BattleEntityProxy.GetEntity
 static void* g_proxy_field;        // BattleReduceHpCtrl.battleEntityProxy
 static size_t g_proxy_offset;
