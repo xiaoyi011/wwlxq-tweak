@@ -160,21 +160,29 @@ public final class Launcher {
             lp.topMargin = dp(240);
             lp.rightMargin = dp(16);
             b.setLayoutParams(lp);
-            b.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) { onBallClick(a); }
-            });
-            // 拖动
+            // 点击 + 拖动
             b.setOnTouchListener(new View.OnTouchListener() {
-                float dx, dy;
+                float downX, downY, startX, startY;
+                boolean moved;
                 public boolean onTouch(View v, MotionEvent e) {
                     switch (e.getActionMasked()) {
                         case MotionEvent.ACTION_DOWN:
-                            dx = v.getX() - e.getRawX();
-                            dy = v.getY() - e.getRawY();
-                            return false;
-                        case MotionEvent.ACTION_MOVE:
-                            v.setX(e.getRawX() + dx);
-                            v.setY(e.getRawY() + dy);
+                            downX = e.getRawX();
+                            downY = e.getRawY();
+                            startX = v.getX();
+                            startY = v.getY();
+                            moved = false;
+                            return true;
+                        case MotionEvent.ACTION_MOVE: {
+                            float dx = e.getRawX() - downX;
+                            float dy = e.getRawY() - downY;
+                            if (Math.abs(dx) > dp(6) || Math.abs(dy) > dp(6)) moved = true;
+                            v.setX(startX + dx);
+                            v.setY(startY + dy);
+                            return true;
+                        }
+                        case MotionEvent.ACTION_UP:
+                            if (!moved) onBallClick(a);
                             return true;
                     }
                     return false;
@@ -227,6 +235,7 @@ public final class Launcher {
     }
 
     static void onBallClick(final Activity a) {
+        logger("ball click licensed=" + licensed);
         if (!licensed) {
             showLicenseDialog(a, lockMsg.length() > 0 ? lockMsg : null);
             return;
