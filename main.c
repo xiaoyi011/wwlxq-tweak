@@ -1,5 +1,5 @@
-// awj tweak: 娓呭満 / 鏀婚€?/ 鐩存帴鍒よ儨锛岄€氳繃 UDP 绔彛 27043 鎺у埗
-// 缂栬瘧: xcrun --sdk iphoneos clang -arch arm64 -miphoneos-version-min=13.0 \
+// awj tweak: 清场 / 攻速 / 直接判胜，通过 UDP 端口 27043 控制
+// 编译: xcrun --sdk iphoneos clang -arch arm64 -miphoneos-version-min=13.0 \
 //         -dynamiclib -O2 -fblocks -o awj.dylib main.c
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,7 +34,7 @@ static void log_file(void) {
     fprintf(stderr, TAG __VA_ARGS__); fprintf(stderr, "\n"); \
 } while (0)
 
-// ---------------- il2cpp 鎺ュ彛 ----------------
+// ---------------- il2cpp 接口 ----------------
 static void*            (*x_domain_get)(void);
 static void**           (*x_domain_get_assemblies)(void*, size_t*);
 static void*            (*x_assembly_get_image)(void*);
@@ -84,7 +84,7 @@ static int resolve_api(void) {
     return x_domain_get && x_runtime_invoke && x_class_from_name;
 }
 
-// ---------------- 娓告垙瀵硅薄 ----------------
+// ---------------- 游戏对象 ----------------
 static void* g_image;
 static void* g_main_panel_field;   // BattleDefine.mainPanel (static)
 static void* g_view_field;         // BattleMainPanel.battleDebugActionView
@@ -172,7 +172,7 @@ static void invoke0(void* method, void* obj, const char* what) {
     if (exc) LOG("%s exception", what);
 }
 
-// ---------------- 鍛戒护 ----------------
+// ---------------- 命令 ----------------
 static volatile int g_auto = 0;
 static volatile int g_pending = 0;
 
@@ -209,7 +209,8 @@ static void do_win(void) {
     if (exc) LOG("win exception"); else LOG("win done");
 }
 
-// 涓荤嚎绋嬫墽琛屾父鎴忚皟鐢?static void run_on_main(void (^block)(void)) {
+// 主线程执行游戏调用
+static void run_on_main(void (^block)(void)) {
     dispatch_async(dispatch_get_main_queue(), block);
 }
 
@@ -234,7 +235,8 @@ static void* auto_thread(void* arg) {
     (void)arg;
     while (1) {
         if (g_auto) {
-            // 500ms 涓€娆★紝涓荤嚎绋嬫墽琛?            g_pending = 1;
+            // 500ms 一次，主线程执行
+            g_pending = 1;
             run_on_main(^{
                 if (g_pending) { g_pending = 0; do_clear(); }
             });
@@ -286,7 +288,7 @@ static void awj_init(void) {
     pthread_create(&t, NULL, udp_thread, NULL);
     pthread_create(&t, NULL, auto_thread, NULL);
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
-        for (int i = 0; i < 600; i++) {          // 鏈€澶氱瓑 5 鍒嗛挓
+        for (int i = 0; i < 600; i++) {          // 最多等 5 分钟
             if (!x_domain_get && !resolve_api()) { usleep(500000); continue; }
             if (x_domain_get() && resolve_game()) break;
             usleep(500000);
