@@ -130,7 +130,6 @@ public final class Launcher {
         try {
             Window w = a.getWindow();
             if (w == null) return;
-            installVolumeKeys(w);
             final FrameLayout root = (FrameLayout) w.getDecorView();
             if (root.findViewById(0xA1A1) != null) return;
 
