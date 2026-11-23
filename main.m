@@ -115,6 +115,8 @@ static size_t g_view_offset;
 static void* g_m_kill_monster;     // BattleDebugActionView.OnKillMonster
 static void* g_m_cheat;            // BattleDebugActionView.OnCheatClick
 static void* g_m_kill_robot;       // BattleDebugActionView.OnKillRobotClick
+static void* g_bpvp_field;         // BaseViewExtend.battlePvpProxy (static)
+static void* g_m_set_result;       // BattlePvpProxy.SetBattleResult(BattleResult, bool)
 static void* g_m_get_entity;       // BattleEntityProxy.GetEntity
 static void* g_proxy_field;        // BattleReduceHpCtrl.battleEntityProxy
 static size_t g_proxy_offset;
@@ -199,6 +201,12 @@ static int resolve_game(void) {
     if (!m1 || !m2 || !m3 || !m4) return 0;
     g_m_kill_monster = m1; g_m_cheat = m2; g_m_kill_robot = m3; g_m_get_entity = m4;
 
+    void* bve = class_of(g_image, "BaseViewExtend");
+    void* bpp = class_of(g_image, "BattlePvpProxy");
+    if (bve) g_bpvp_field = x_class_get_field_from_name(bve, "battlePvpProxy");
+    if (bpp) g_m_set_result = x_class_get_method_from_name(bpp, "SetBattleResult", 2);
+    LOG("set_result=%d proxy_field=%d", g_m_set_result != NULL, g_bpvp_field != NULL);
+
     LOG("game resolved");
     return 1;
 }
@@ -248,13 +256,30 @@ static void do_cheat(void) {
 }
 
 static void do_win(void) {
+    // 直接设置战斗结果为胜利：PVP 与单人关卡都生效
+    if (g_bpvp_field && g_m_set_result) {
+        void* proxy = NULL;
+        x_field_static_get_value(g_bpvp_field, &proxy);
+        if (proxy) {
+            int32_t r = 1;      // BattleDefine.BattleResult.win
+            uint8_t force = 1;  // isForceEnd
+            void* params[2] = { &r, &force };
+            void* exc = NULL;
+            x_runtime_invoke(g_m_set_result, proxy, params, &exc);
+            if (exc) LOG("win: set_result exception");
+            else { LOG("win done (set_result)"); return; }
+        } else {
+            LOG("win: proxy null");
+        }
+    }
+    // 回退：调试面板的 PVP 判胜
     void* v = view();
     if (!v) { LOG("win: no view"); return; }
     int star = 3;
     void* params[1] = { &star };
     void* exc = NULL;
     x_runtime_invoke(g_m_kill_robot, v, params, &exc);
-    if (exc) LOG("win exception"); else LOG("win done");
+    if (exc) LOG("win exception"); else LOG("win done (kill_robot)");
 }
 
 // 主线程执行游戏调用
