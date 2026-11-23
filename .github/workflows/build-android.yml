@@ -23,16 +23,27 @@ jobs:
       - name: Build classes.dex
         run: |
           set -e
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager "platforms;android-30" "build-tools;34.0.0" >/dev/null 2>&1 || true
-          mkdir -p classes
-          javac -source 8 -target 8 \
-            -bootclasspath "$ANDROID_HOME/platforms/android-30/android.jar" \
-            -d classes $(find android/java -name '*.java')
-          mkdir -p dexout
-          "$ANDROID_HOME/build-tools/34.0.0/d8" \
-            --lib "$ANDROID_HOME/platforms/android-30/android.jar" \
-            --output dexout $(find classes -name '*.class')
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          if [ -z "$SDK" ]; then SDK=/usr/local/lib/android/sdk; fi
+          echo "SDK=$SDK"
+          ls "$SDK" | head
+          SDKMANAGER="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then SDKMANAGER="$(command -v sdkmanager || true)"; fi
+          echo "sdkmanager=$SDKMANAGER"
+          if [ -n "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+            "$SDKMANAGER" "platforms;android-30" "build-tools;34.0.0" >/dev/null 2>&1 || true
+          fi
+          JAR="$SDK/platforms/android-30/android.jar"
+          if [ ! -f "$JAR" ]; then JAR=$(find "$SDK/platforms" -name android.jar | sort | tail -1); fi
+          echo "JAR=$JAR"
+          ls -l "$JAR"
+          mkdir -p classes dexout
+          javac -source 8 -target 8 -bootclasspath "$JAR" -d classes $(find android/java -name '*.java')
+          D8="$SDK/build-tools/34.0.0/d8"
+          if [ ! -x "$D8" ]; then D8=$(find "$SDK/build-tools" -name d8 | sort | tail -1); fi
+          echo "D8=$D8"
+          "$D8" --lib "$JAR" --output dexout $(find classes -name '*.class')
           file dexout/classes.dex
           ls -l dexout
 
