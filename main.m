@@ -645,9 +645,9 @@ static void awj_toggle_panel(void) {
     int gridItems = GM_BTN_COUNT + 2;
     int gridRows = (gridItems + 1) / 2;
     CGFloat rowsH = gridRows * 46 + 46 + 6 * 46 + 46 + 14;
-    CGFloat hgt = MIN(640, 44 + rowsH);
     CGFloat sw = g_awj_host.bounds.size.width;
     CGFloat sh = g_awj_host.bounds.size.height;
+    CGFloat hgt = MIN(44 + rowsH, MAX(300, sh * 0.62f));
 
     UIView* p = [[UIView alloc] initWithFrame:CGRectMake((sw - w) / 2, (sh - hgt) / 2, w, hgt)];
     p.backgroundColor = [UIColor colorWithRed:14/255.0 green:27/255.0 blue:46/255.0 alpha:0.94];
