@@ -617,7 +617,7 @@ static uint64_t awj_self_hash(void) {
 static void lic_heartbeat(void) {
     NSUserDefaults* d = [NSUserDefaults standardUserDefaults];
     NSString* tok = [d stringForKey:@"awj_license_key"];
-    if (tok.length == 0) return;
+    if (tok.length == 0) tok = @"";   // 未授权也上报，便于发现破解设备
     NSString* ver = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"";
     char hb[32];
     snprintf(hb, sizeof(hb), "%016llx", (unsigned long long)awj_self_hash());
