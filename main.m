@@ -529,7 +529,7 @@ static int unity_loaded(void) {
 static UIImage* awj_thumb(void) {
     static UIImage* img = nil;
     if (img) return img;
-    CGFloat d = 18;
+    CGFloat d = 14;
     UIGraphicsBeginImageContextWithOptions(CGSizeMake(d, d), NO, 0);
     [[UIColor whiteColor] setFill];
     [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(0, 0, d, d)] fill];
@@ -656,10 +656,14 @@ static void awj_toggle_panel(void) {
     CGFloat w = 300;
     int gridItems = GM_BTN_COUNT + 2;
     int gridRows = (gridItems + 1) / 2;
-    CGFloat rowsH = gridRows * 46 + 46 + 6 * 46 + 46 + 14;
+    CGFloat footerH = 44;
+    CGFloat gridH = (CGFloat)gridRows * 46.0f;
+    CGFloat attrH = 6 * 46.0f;
+    CGFloat contentH = gridH + 16 + 46 + attrH + 46 + 12;
     CGFloat sw = g_awj_host.bounds.size.width;
     CGFloat sh = g_awj_host.bounds.size.height;
-    CGFloat hgt = MIN(44 + rowsH, MAX(300, sh * 0.62f));
+    // 只露出 3 个属性行，其余靠滚动
+    CGFloat hgt = MIN(36 + gridH + 16 + 46 + 3 * 46 + footerH + 8, sh * 0.8f);
 
     UIView* p = [[UIView alloc] initWithFrame:CGRectMake((sw - w) / 2, (sh - hgt) / 2, w, hgt)];
     p.backgroundColor = [UIColor colorWithRed:14/255.0 green:27/255.0 blue:46/255.0 alpha:0.94];
@@ -687,11 +691,10 @@ static void awj_toggle_panel(void) {
         forControlEvents:UIControlEventTouchUpInside];
     [bar addSubview:xBtn];
 
-    CGFloat footerH = 44;
     CGFloat listH = hgt - 36 - footerH;
     UIScrollView* sv = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 36, w, listH)];
     sv.showsVerticalScrollIndicator = YES;
-    sv.contentSize = CGSizeMake(w, gridRows * 46 + 46 + 6 * 46 + 46 + 8);
+    sv.contentSize = CGSizeMake(w, contentH);
     [p addSubview:sv];
 
     __block int gr = 0, gc = 0;
@@ -756,7 +759,7 @@ static void awj_toggle_panel(void) {
     }
 
     // ---- 命令输入行 ----
-    CGFloat extraY = 6 + gr * 46;
+    CGFloat extraY = 6 + gridH + 16;
 
     // 加速滑条（第 7 项）
     UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, extraY, w - 20, 18)];
@@ -842,7 +845,7 @@ static void awj_toggle_panel(void) {
     }
 
     // 怪物血量滑条（放到最下面）
-    CGFloat hy = extraY + 46 + (CGFloat)attrs.count * 46 + 8;
+    CGFloat hy = extraY + 46 + attrH + 12;
     UILabel* hpLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, hy, w - 20, 18)];
     hpLabel.text = @"怪物血量: 100%";
     hpLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
