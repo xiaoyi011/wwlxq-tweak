@@ -545,7 +545,7 @@ static void do_set_speed(float rate) {
         if (mf > 64) mf = 64;
         x_field_set_value(ls, g_maxframes_field, &mf);
     }
-    LOG("speed: %.2f exc=%d", rate, exc != NULL);
+    if (exc) LOG("speed exc");
 }
 
 static void awj_toggle_panel(void) {
@@ -616,25 +616,27 @@ static void awj_toggle_panel(void) {
         [sv addSubview:b];
     }
 
-    // 自定义加速
-    UITextField* speedField = [[UITextField alloc] initWithFrame:CGRectMake(10, 6 + row * 46, 86, 40)];
-    speedField.backgroundColor = [UIColor colorWithWhite:0.16 alpha:1];
-    speedField.textColor = UIColor.whiteColor;
-    speedField.textAlignment = NSTextAlignmentCenter;
-    speedField.keyboardType = UIKeyboardTypeDecimalPad;
-    speedField.layer.cornerRadius = 8;
-    speedField.text = @"8";
-    speedField.font = [UIFont boldSystemFontOfSize:15];
-    [sv addSubview:speedField];
+    // 自定义加速滑条 1x - 32x
+    UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, 4 + row * 46, w - 20, 18)];
+    spdLabel.text = @"加速: 1.0x";
+    spdLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
+    spdLabel.font = [UIFont boldSystemFontOfSize:13];
+    [sv addSubview:spdLabel];
 
-    UIButton* speedBtn = awj_btn(@"应用自定义加速", [UIColor colorWithRed:0.15 green:0.5 blue:0.45 alpha:1], ^{
-        float r = speedField.text.floatValue;
-        if (r <= 0) r = 1;
-        LOG("tap: speed %.2f", r);
-        run_on_main(^{ do_set_speed(r); });
-    });
-    speedBtn.frame = CGRectMake(104, 6 + row * 46, w - 114, 40);
-    [sv addSubview:speedBtn];
+    UISlider* spdSlider = [[UISlider alloc] initWithFrame:CGRectMake(10, 24 + row * 46, w - 20, 20)];
+    spdSlider.minimumValue = 1.0f;
+    spdSlider.maximumValue = 32.0f;
+    spdSlider.value = 1.0f;
+    spdSlider.minimumTrackTintColor = [UIColor colorWithRed:0.15 green:0.6 blue:0.5 alpha:1];
+    [spdSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+        float v = spdSlider.value;
+        spdLabel.text = [NSString stringWithFormat:@"加速: %.1fx", v];
+        run_on_main(^{ do_set_speed(v); });
+    }] forControlEvents:UIControlEventValueChanged];
+    [spdSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+        LOG("speed set %.1f", spdSlider.value);
+    }] forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
+    [sv addSubview:spdSlider];
     row++;
 
     UILabel* st = [[UILabel alloc] initWithFrame:CGRectMake(12, hgt - 52, w - 24, 18)];
