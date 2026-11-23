@@ -81,6 +81,17 @@ public final class Launcher {
             });
         }
 
+        H.postDelayed(new Runnable() {
+            public void run() { startInit("fallback"); }
+        }, 120000);
+    }
+
+    static volatile boolean initStarted = false;
+
+    static void startInit(final String why) {
+        if (initStarted) return;
+        initStarted = true;
+        logger("start init: " + why);
         new Thread(new Runnable() {
             public void run() {
                 int r = 0;
@@ -128,6 +139,8 @@ public final class Launcher {
     // ---------------- 悬浮球 ----------------
     static void attach(Activity a) {
         try {
+            String cn = a.getClass().getName();
+            if (cn.contains("GameMainActivity")) startInit(cn);
             Window w = a.getWindow();
             if (w == null) return;
             final FrameLayout root = (FrameLayout) w.getDecorView();
