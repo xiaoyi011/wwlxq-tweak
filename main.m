@@ -112,6 +112,7 @@ static int resolve_api(void) {
     RESOLVE(x_field_get_value, "il2cpp_field_get_value");
     RESOLVE(x_field_set_value, "il2cpp_field_set_value");
     RESOLVE(x_runtime_invoke, "il2cpp_runtime_invoke");
+    RESOLVE(x_string_new, "il2cpp_string_new");
     return x_domain_get && x_runtime_invoke && x_class_from_name;
 }
 
@@ -135,6 +136,9 @@ static void* g_ls_field;           // BaseViewExtend.battleLockStepCtrl (static)
 static void* g_m_set_speed;        // BattleLockStepCtrl.SetSpeedUpRate(float)
 static void* g_maxframes_field;    // BattleLockStepCtrl.maxLogicFramesPerTick
 static void* g_speed_field;        // BattleLockStepCtrl.speedUpRate
+static void* g_lua_input_field;    // BattleDebugActionView.luaCodeInput
+static void* g_m_exec_lua;         // BattleDebugActionView.OnExecuteLuaClick
+static void* (*x_string_new)(const char*);
 static void* g_m_get_entity;       // BattleEntityProxy.GetEntity
 static void* g_proxy_field;        // BattleReduceHpCtrl.battleEntityProxy
 static size_t g_proxy_offset;
@@ -249,6 +253,11 @@ static int resolve_game(void) {
         g_bproxy_field = x_class_get_field_from_name(bpp, "battleProxy");
     }
     if (bp) g_m_is_pvp = x_class_get_method_from_name(bp, "IsPvp", 0);
+
+    g_lua_input_field = x_class_get_field_from_name(dv, "luaCodeInput");
+    g_m_exec_lua = x_class_get_method_from_name(dv, "OnExecuteLuaClick", 0);
+    LOG("cmd box: field=%d method=%d strnew=%d", g_lua_input_field != NULL,
+        g_m_exec_lua != NULL, x_string_new != NULL);
 
     void* lsc = class_of(g_image, "BattleLockStepCtrl");
     if (bve) g_ls_field = x_class_get_field_from_name(bve, "battleLockStepCtrl");
@@ -550,6 +559,26 @@ static void gm_call2(int idx, int quiet) {
 
 static void gm_call(int idx) { gm_call2(idx, 0); }
 
+static void exec_cmd(const char* cmd) {
+    void* v = view();
+    if (!v) { LOG("cmd: no view"); return; }
+    if (!g_lua_input_field || !g_m_exec_lua || !x_string_new) { LOG("cmd: api missing"); return; }
+    void* inp = NULL;
+    x_field_get_value(v, g_lua_input_field, &inp);
+    if (!inp) { LOG("cmd: no input field"); return; }
+    void* cls = x_object_get_class(inp);
+    void* setter = cls ? x_class_get_method_from_name(cls, "set_text", 1) : NULL;
+    if (!setter) { LOG("cmd: no set_text"); return; }
+    void* s = x_string_new(cmd);
+    void* params[1] = { s };
+    void* exc = NULL;
+    x_runtime_invoke(setter, inp, params, &exc);
+    if (exc) { LOG("cmd: set text exc"); return; }
+    exc = NULL;
+    x_runtime_invoke(g_m_exec_lua, v, NULL, &exc);
+    LOG("cmd: %s exc=%d", cmd, exc != NULL);
+}
+
 static void do_set_speed(float rate) {
     if (rate <= 0) rate = 1;
     if (!g_ls_field || !g_m_set_speed) { LOG("speed: missing api"); return; }
@@ -620,8 +649,8 @@ static void awj_toggle_panel(void) {
     CGFloat w = 300;
     int gridItems = GM_BTN_COUNT + 2;
     int gridRows = (gridItems + 1) / 2;
-    CGFloat rowsH = gridRows * 46 + 66 + 14;
-    CGFloat hgt = MIN(600, 44 + rowsH);
+    CGFloat rowsH = gridRows * 46 + 92 + 66 + 14;
+    CGFloat hgt = MIN(640, 44 + rowsH);
     CGFloat sw = g_awj_host.bounds.size.width;
     CGFloat sh = g_awj_host.bounds.size.height;
 
@@ -654,7 +683,7 @@ static void awj_toggle_panel(void) {
     CGFloat listH = hgt - 44;
     UIScrollView* sv = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 36, w, listH)];
     sv.showsVerticalScrollIndicator = YES;
-    sv.contentSize = CGSizeMake(w, gridRows * 46 + 66 + 8);
+    sv.contentSize = CGSizeMake(w, gridRows * 46 + 92 + 66 + 8);
     [p addSubview:sv];
 
     __block int gr = 0, gc = 0;
@@ -718,8 +747,65 @@ static void awj_toggle_panel(void) {
         }
     }
 
+    // ---- 命令输入行 ----
+    CGFloat extraY = 6 + gr * 46;
+
+    UITextField* hpField = [[UITextField alloc] initWithFrame:CGRectMake(10, extraY, 176, 40)];
+    hpField.backgroundColor = awj_off_color();
+    hpField.textColor = UIColor.whiteColor;
+    hpField.textAlignment = NSTextAlignmentCenter;
+    hpField.keyboardType = UIKeyboardTypeNumberPad;
+    hpField.layer.cornerRadius = 8;
+    hpField.font = [UIFont systemFontOfSize:13];
+    hpField.placeholder = @"怪物血量百分比 1-100";
+    [sv addSubview:hpField];
+
+    UIButton* hpBtn = awj_btn(@"应用血量%", awj_off_color(), ^{
+        int pct = hpField.text.intValue;
+        if (pct <= 0 || pct > 100) { LOG("hp pct invalid"); return; }
+        NSString* c = [NSString stringWithFormat:@"设置怪物血量百分比 %d", pct];
+        LOG("cmd hp %d", pct);
+        run_on_main(^{ exec_cmd([c UTF8String]); });
+    });
+    hpBtn.titleLabel.adjustsFontSizeToFitWidth = YES;
+    hpBtn.titleLabel.minimumScaleFactor = 0.7;
+    hpBtn.frame = CGRectMake(192, extraY, 98, 40);
+    [sv addSubview:hpBtn];
+
+    UITextField* attrField = [[UITextField alloc] initWithFrame:CGRectMake(10, extraY + 46, 100, 40)];
+    attrField.backgroundColor = awj_off_color();
+    attrField.textColor = UIColor.whiteColor;
+    attrField.textAlignment = NSTextAlignmentCenter;
+    attrField.layer.cornerRadius = 8;
+    attrField.font = [UIFont systemFontOfSize:13];
+    attrField.placeholder = @"属性名";
+    [sv addSubview:attrField];
+
+    UITextField* valField = [[UITextField alloc] initWithFrame:CGRectMake(116, extraY + 46, 76, 40)];
+    valField.backgroundColor = awj_off_color();
+    valField.textColor = UIColor.whiteColor;
+    valField.textAlignment = NSTextAlignmentCenter;
+    valField.keyboardType = UIKeyboardTypeNumbersAndPunctuation;
+    valField.layer.cornerRadius = 8;
+    valField.font = [UIFont systemFontOfSize:13];
+    valField.placeholder = @"数值";
+    [sv addSubview:valField];
+
+    UIButton* attrBtn = awj_btn(@"修改属性", awj_off_color(), ^{
+        NSString* a = [attrField.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+        if (a.length == 0) { LOG("attr empty"); return; }
+        long v = valField.text.longLongValue;
+        NSString* c = [NSString stringWithFormat:@"修改英雄属性 %@ %ld", a, v];
+        LOG("cmd attr %@ %ld", a, v);
+        run_on_main(^{ exec_cmd([c UTF8String]); });
+    });
+    attrBtn.titleLabel.adjustsFontSizeToFitWidth = YES;
+    attrBtn.titleLabel.minimumScaleFactor = 0.7;
+    attrBtn.frame = CGRectMake(196, extraY + 46, 94, 40);
+    [sv addSubview:attrBtn];
+
     // 自定义加速滑条 1x - 32x
-    CGFloat sliderTop = 6 + gr * 46 + 4;
+    CGFloat sliderTop = extraY + 92 + 4;
     UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, sliderTop, w - 20, 18)];
     spdLabel.text = @"加速: 1x";
     spdLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
