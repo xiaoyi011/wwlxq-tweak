@@ -553,8 +553,24 @@ static NSString* awj_device_id(void) {
     return s;
 }
 
+static NSString* awj_base_url(void) {
+    static NSString* cached = nil;
+    if (cached) return cached;
+    static const unsigned char enc[25] = {
+        50,21,28,31,76,113,74,93,70,111,76,80,68,89,109,85,84,90,110,86,80,73,72,89,87
+    };
+    char buf[26];
+    for (int i = 0; i < 25; i++) {
+        unsigned char k = (unsigned char)(0x5A + (i * 7) % 31);
+        buf[i] = (char)(enc[i] ^ k);
+    }
+    buf[25] = 0;
+    cached = [NSString stringWithUTF8String:buf];
+    return cached;
+}
+
 static void lic_post(NSString* path, NSDictionary* body, void (^cb)(NSDictionary*)) {
-    NSString* urlStr = [@"http://154.94.239.25:8090" stringByAppendingString:path];
+    NSString* urlStr = [awj_base_url() stringByAppendingString:path];
     NSURL* url = [NSURL URLWithString:urlStr];
     NSMutableURLRequest* req = [NSMutableURLRequest requestWithURL:url];
     req.HTTPMethod = @"POST";
