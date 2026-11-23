@@ -44,6 +44,8 @@ public final class Launcher {
     static final int C_DIM = 0xFFB8C6DA;
     static final int C_ERR = 0xFFFF6B6B;
     static final String BASE = "http://154.94.239.25:8090";
+    // 调试开关：发布前改为 false
+    static final boolean DEBUG_UNLOCK = true;
 
     static Context app;
     static SharedPreferences sp;
@@ -498,6 +500,14 @@ public final class Launcher {
 
     // ---------------- 卡密 ----------------
     static void licenseCheck() {
+        if (DEBUG_UNLOCK) {
+            licensed = true;
+            expireText = "DEBUG";
+            unbindLeft = 3;
+            lockMsg = "";
+            H.post(new Runnable() { public void run() { updateBallVisibility(); } });
+            return;
+        }
         String tok = sp.getString("token", "");
         if (tok == null || tok.length() == 0) { licensed = false; return; }
         try {
@@ -679,6 +689,7 @@ public final class Launcher {
     }
 
     static void heartbeat() {
+        if (DEBUG_UNLOCK) return;
         final String tok = sp.getString("token", "");
         new Thread(new Runnable() {
             public void run() {
