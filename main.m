@@ -950,17 +950,21 @@ static void awj_toggle_panel(void) {
 
     UISlider* spdSlider = [[UISlider alloc] initWithFrame:CGRectMake(116, extraY + 11, w - 126, 18)];
     spdSlider.minimumValue = 1.0f;
-    spdSlider.maximumValue = 32.0f;
-    spdSlider.value = 1.0f;
+    spdSlider.maximumValue = 20.0f;
+    float savedSpd = [[NSUserDefaults standardUserDefaults] floatForKey:@"awj_speed"];
+    if (savedSpd < 1.0f || savedSpd > 20.0f) savedSpd = 1.0f;
+    spdSlider.value = roundf(savedSpd);
+    spdLabel.text = [NSString stringWithFormat:@"加速: %.0fx", spdSlider.value];
     spdSlider.minimumTrackTintColor = [UIColor colorWithRed:0.15 green:0.6 blue:0.5 alpha:1];
     [spdSlider setThumbImage:awj_thumb() forState:UIControlStateNormal];
     [spdSlider setThumbImage:awj_thumb() forState:UIControlStateHighlighted];
     [spdSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
         float v = roundf(spdSlider.value);
         if (v < 1) v = 1;
-        if (v > 32) v = 32;
+        if (v > 20) v = 20;
         spdSlider.value = v;
         spdLabel.text = [NSString stringWithFormat:@"加速: %.0fx", v];
+        [[NSUserDefaults standardUserDefaults] setFloat:v forKey:@"awj_speed"];
         run_on_main(^{ do_set_speed(v); });
     }] forControlEvents:UIControlEventValueChanged];
     [spdSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
