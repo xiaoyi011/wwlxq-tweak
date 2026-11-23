@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - main.c
+      - main.m
 
 jobs:
   build:
@@ -17,7 +17,6 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq clang lld unzip curl
-          which clang lld ld64.lld || true
           clang --version | head -2
 
       - name: Fetch iOS SDK
@@ -31,10 +30,11 @@ jobs:
           set -e
           SDK=$(ls -d sdks-master/iPhoneOS*.sdk | sort -V | tail -1)
           echo "USING $SDK"
-          clang -target arm64-apple-ios13.0 -isysroot "$SDK" \
-            -fuse-ld=lld -fblocks -O2 -dynamiclib \
+          clang -target arm64-apple-ios14.0 -isysroot "$SDK" \
+            -fuse-ld=lld -fblocks -fobjc-arc -O2 -dynamiclib \
             -Wl,-undefined,dynamic_lookup \
-            -o awj.dylib main.c
+            -framework UIKit -framework Foundation \
+            -o awj.dylib main.m
           file awj.dylib
           ls -l awj.dylib
 
