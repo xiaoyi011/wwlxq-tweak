@@ -485,7 +485,17 @@ static UIButton* awj_btn(NSString* title, UIColor* bg, void (^h)(void)) {
     return b;
 }
 
+static int unity_loaded(void) {
+    uint32_t n = _dyld_image_count();
+    for (uint32_t i = 0; i < n; i++) {
+        const char* nm = _dyld_get_image_name(i);
+        if (nm && strstr(nm, "UnityFramework")) return 1;
+    }
+    return 0;
+}
+
 static void ensure_resolved(void) {
+    if (!unity_loaded()) return;
     if (!x_domain_get) resolve_api();
     if (!g_m_kill_monster && x_domain_get) resolve_game();
 }
@@ -640,7 +650,9 @@ static void awj_init(void) {
         }
     });
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
+        usleep(10 * 1000000);   // 等 Unity 运行时初始化稳定
         for (int i = 0; i < 600; i++) {          // 最多等 5 分钟
+            if (!unity_loaded()) { usleep(500000); continue; }
             if (!x_domain_get && !resolve_api()) { usleep(500000); continue; }
             if (x_domain_get() && resolve_game()) break;
             usleep(500000);
