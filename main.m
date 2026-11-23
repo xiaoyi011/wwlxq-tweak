@@ -25,6 +25,7 @@ static UIView*   g_awj_panel;
 static void awj_build_ui(void);
 static void gm_call2(int idx, int quiet);
 static void lic_activate_dialog(UIViewController* vc, void (^done)(BOOL, NSString*));
+static void do_set_speed(float rate);
 
 static volatile float g_spd_saved = 0;  // 记忆的加速倍率（>1 自动应用）
 static volatile int g_t_sp  = 0;   // 无限银币/SP（持续，按钮 0）
