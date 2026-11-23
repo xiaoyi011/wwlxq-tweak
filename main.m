@@ -664,7 +664,7 @@ static void awj_toggle_panel(void) {
     CGFloat sw = g_awj_host.bounds.size.width;
     CGFloat sh = g_awj_host.bounds.size.height;
     // 只露出 3 个属性行，其余靠滚动
-    CGFloat hgt = MIN(36 + gridH + 16 + rowH + 3 * rowH + footerH + 8, sh * 0.8f);
+    CGFloat hgt = MIN(36 + gridH + 16 + rowH + 1 * rowH + footerH + 8, sh * 0.8f);
 
     UIView* p = [[UIView alloc] initWithFrame:CGRectMake((sw - w) / 2, (sh - hgt) / 2, w, hgt)];
     p.backgroundColor = [UIColor colorWithRed:14/255.0 green:27/255.0 blue:46/255.0 alpha:0.94];
