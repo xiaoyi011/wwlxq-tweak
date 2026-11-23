@@ -119,7 +119,7 @@ static void* class_of(void* image, const char* name) {
     return x_class_from_name(image, "Game.Bussiness", name);
 }
 
-static char  g_img_hint[64];
+static char  g_img_hint[150];
 static int   g_img_count = 0;
 
 static void* find_image(const char* prefix) {
@@ -130,18 +130,25 @@ static void* find_image(const char* prefix) {
     if (!asms) return NULL;
     g_img_count = (int)cnt;
     g_img_hint[0] = 0;
+
+    void* exact = NULL;
+    void* loose = NULL;
     for (size_t i = 0; i < cnt; i++) {
         void* img = x_assembly_get_image(asms[i]);
         if (!img) continue;
         const char* nm = x_image_get_name(img);
         if (!nm) continue;
-        if (strstr(nm, "CSharp") && strlen(g_img_hint) < 50) {
+
+        if (strstr(nm, "CSharp") && strlen(g_img_hint) < 120) {
             if (g_img_hint[0]) strncat(g_img_hint, ",", sizeof(g_img_hint)-strlen(g_img_hint)-1);
             strncat(g_img_hint, nm, sizeof(g_img_hint)-strlen(g_img_hint)-1);
         }
-        if (strncmp(nm, prefix, strlen(prefix)) == 0) return img;
+
+        if (strcmp(nm, "Assembly-CSharp.dll") == 0) exact = img;
+        else if (!loose && !strstr(nm, "firstpass") &&
+                 strncmp(nm, prefix, strlen(prefix)) == 0) loose = img;
     }
-    return NULL;
+    return exact ? exact : loose;
 }
 
 static int g_miss_logged = 0;
@@ -334,6 +341,16 @@ static void* udp_thread(void* arg) {
 }
 
 // ---------------- 游戏内悬浮面板 ----------------
+@interface AWJPassthroughView : UIView
+@end
+
+@implementation AWJPassthroughView
+- (UIView*)hitTest:(CGPoint)point withEvent:(UIEvent*)event {
+    UIView* v = [super hitTest:point withEvent:event];
+    return (v == self) ? nil : v;
+}
+@end
+
 static UIWindow* g_awj_window;
 static UIView*   g_awj_panel;
 
@@ -434,7 +451,9 @@ static void awj_build_ui(void) {
     UIWindow* w = [[UIWindow alloc] initWithWindowScene:sc];
     w.windowLevel = UIWindowLevelAlert + 100;
     w.backgroundColor = UIColor.clearColor;
+    w.opaque = NO;
     UIViewController* vc = [UIViewController new];
+    vc.view = [[AWJPassthroughView alloc] initWithFrame:UIScreen.mainScreen.bounds];
     vc.view.backgroundColor = UIColor.clearColor;
     w.rootViewController = vc;
     w.hidden = NO;
