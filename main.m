@@ -731,7 +731,7 @@ static void lic_check(void) {
 static void lic_activate_dialog(UIViewController* vc, void (^done)(BOOL, NSString*)) {
     if (!vc) return;
     UIAlertController* ac = [UIAlertController alertControllerWithTitle:@"输入卡密"
-                                                               message:@"格式：XY-XXXX-XXXX-XXXX-XXXX"
+                                                               message:@"格式：XY-XXXX-XXXX-XXXX-XXXX\n正版QQ群：996078023"
                                                         preferredStyle:UIAlertControllerStyleAlert];
     [ac addTextFieldWithConfigurationHandler:^(UITextField* tf){
         tf.placeholder = @"卡密";
