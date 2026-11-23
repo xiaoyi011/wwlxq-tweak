@@ -28,11 +28,29 @@ static void log_file(void) {
     else snprintf(path, sizeof(path), "/tmp/awj.log");
     g_log = fopen(path, "a");
 }
-#define LOG(...) do { \
-    log_file(); \
-    if (g_log) { fprintf(g_log, TAG __VA_ARGS__); fprintf(g_log, "\n"); fflush(g_log); } \
-    fprintf(stderr, TAG __VA_ARGS__); fprintf(stderr, "\n"); \
-} while (0)
+
+#define LOGRING 10
+static char g_ring[LOGRING][80];
+static int g_ring_n = 0;
+
+static void ring_add(const char* s) {
+    strncpy(g_ring[g_ring_n % LOGRING], s, 79);
+    g_ring[g_ring_n % LOGRING][79] = 0;
+    g_ring_n++;
+}
+
+#include <stdarg.h>
+static void log_msg(const char* fmt, ...) {
+    char buf[80];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    log_file();
+    if (g_log) { fprintf(g_log, TAG "%s\n", buf); fflush(g_log); }
+    ring_add(buf);
+}
+#define LOG(...) log_msg(__VA_ARGS__)
 
 // ---------------- il2cpp 接口 ----------------
 static void*            (*x_domain_get)(void);
@@ -100,22 +118,34 @@ static void* class_of(void* image, const char* name) {
     return x_class_from_name(image, "Game.Bussiness", name);
 }
 
+static char  g_img_hint[64];
+static int   g_img_count = 0;
+
 static void* find_image(const char* prefix) {
     void* d = x_domain_get();
     if (!d) return NULL;
     size_t cnt = 0;
     void** asms = x_domain_get_assemblies(d, &cnt);
     if (!asms) return NULL;
+    g_img_count = (int)cnt;
+    g_img_hint[0] = 0;
     for (size_t i = 0; i < cnt; i++) {
         void* img = x_assembly_get_image(asms[i]);
         if (!img) continue;
         const char* nm = x_image_get_name(img);
-        if (nm && strncmp(nm, prefix, strlen(prefix)) == 0) return img;
+        if (!nm) continue;
+        if (strstr(nm, "CSharp") && strlen(g_img_hint) < 50) {
+            if (g_img_hint[0]) strncat(g_img_hint, ",", sizeof(g_img_hint)-strlen(g_img_hint)-1);
+            strncat(g_img_hint, nm, sizeof(g_img_hint)-strlen(g_img_hint)-1);
+        }
+        if (strncmp(nm, prefix, strlen(prefix)) == 0) return img;
     }
     return NULL;
 }
 
 static int g_miss_logged = 0;
+static int g_img_logged = 0;
+static unsigned g_cls_mask = 0;
 
 static int resolve_game(void) {
     g_image = find_image("Assembly-CSharp");
@@ -124,15 +154,21 @@ static int resolve_game(void) {
         return 0;
     }
 
+    if (!g_img_logged) {
+        g_img_logged = 1;
+        LOG("img ok n=%d hint=%s", g_img_count, g_img_hint);
+    }
+
     void* bd  = class_of(g_image, "BattleDefine");
     void* mp  = class_of(g_image, "BattleMainPanel");
     void* dv  = class_of(g_image, "BattleDebugActionView");
     void* rc  = class_of(g_image, "BattleReduceHpCtrl");
     void* ep  = class_of(g_image, "BattleEntityProxy");
+    g_cls_mask = (bd?1:0) | (mp?2:0) | (dv?4:0) | (rc?8:0) | (ep?16:0);
     if (!bd || !mp || !dv || !rc || !ep) {
         if (g_miss_logged < 3) {
             g_miss_logged++;
-            LOG("miss class: bd=%d mp=%d dv=%d rc=%d ep=%d", bd!=NULL, mp!=NULL, dv!=NULL, rc!=NULL, ep!=NULL);
+            LOG("miss class mask=%u hint=%s", g_cls_mask, g_img_hint);
         }
         return 0;
     }
@@ -222,11 +258,27 @@ static void handle(const char* cmd) {
     else if (!strcmp(cmd, "a1")) { g_auto = 1; LOG("auto on"); reply("ok:auto1"); }
     else if (!strcmp(cmd, "a0")) { g_auto = 0; LOG("auto off"); reply("ok:auto0"); }
     else if (!strcmp(cmd, "s")) {
-        char b[128];
-        snprintf(b, sizeof(b), "ready=%d auto=%d battle=%d",
-                 g_m_kill_monster != NULL, g_auto, view() != NULL);
+        char b[160];
+        snprintf(b, sizeof(b), "ready=%d mask=%u img=%d n=%d auto=%d battle=%d",
+                 g_m_kill_monster != NULL, g_cls_mask, g_image != NULL,
+                 g_img_count, g_auto, view() != NULL);
         LOG("status %s", b);
         reply(b);
+    }
+    else if (!strcmp(cmd, "i")) {
+        reply(g_img_hint[0] ? g_img_hint : "no-csharp-image");
+    }
+    else if (!strcmp(cmd, "l")) {
+        char b[300];
+        b[0] = 0;
+        int total = g_ring_n < LOGRING ? g_ring_n : LOGRING;
+        for (int k = 0; k < total; k++) {
+            int idx = (g_ring_n - 1 - k + LOGRING * 4) % LOGRING;
+            strncat(b, g_ring[idx], sizeof(b) - strlen(b) - 2);
+            strncat(b, "|", sizeof(b) - strlen(b) - 1);
+            if (strlen(b) > 200) break;
+        }
+        reply(b[0] ? b : "empty");
     }
     else { LOG("unknown cmd: %s", cmd); reply("err:unknown"); }
 }
