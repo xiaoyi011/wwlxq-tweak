@@ -24,6 +24,7 @@ static UIButton* g_awj_ball;
 static UIView*   g_awj_panel;
 static void awj_build_ui(void);
 static void gm_call2(int idx, int quiet);
+static void lic_activate_dialog(UIViewController* vc, void (^done)(BOOL, NSString*));
 
 static volatile int g_t_sp  = 0;   // 无限银币/SP（持续，按钮 0）
 static volatile int g_t_inv = 0;   // 无敌（持续，按钮 1）
@@ -542,6 +543,8 @@ static UIImage* awj_thumb(void) {
 // ---------------- 卡密 ----------------
 static int g_lic_ok = 0;
 static NSString* g_lic_exp = nil;
+static NSString* g_lock_msg = nil;
+static int g_lock_alerted = 0;
 
 static NSString* awj_device_id(void) {
     NSUserDefaults* d = [NSUserDefaults standardUserDefaults];
@@ -627,7 +630,24 @@ static void lic_heartbeat(void) {
              ^(NSDictionary* r){
         if (![r[@"ok"] boolValue] && [r[@"lock"] boolValue]) {
             g_lic_ok = 0;
-            LOG("heartbeat lock: %s", [(r[@"msg"] ?: @"") UTF8String]);
+            NSString* msg = r[@"msg"] ?: @"授权已失效";
+            g_lock_msg = msg;
+            LOG("heartbeat lock: %s", [msg UTF8String]);
+            if (!g_lock_alerted) {
+                g_lock_alerted = 1;
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    UIViewController* vc = g_awj_host.rootViewController;
+                    if (!vc) return;
+                    UIAlertController* ac = [UIAlertController alertControllerWithTitle:@"提示"
+                                                                               message:g_lock_msg
+                                                                        preferredStyle:UIAlertControllerStyleAlert];
+                    [ac addAction:[UIAlertAction actionWithTitle:@"知道了" style:UIAlertActionStyleDefault handler:nil]];
+                    [ac addAction:[UIAlertAction actionWithTitle:@"输入卡密" style:UIAlertActionStyleDefault handler:^(UIAlertAction* a){
+                        lic_activate_dialog(vc, ^(BOOL ok, NSString* m){ });
+                    }]];
+                    [vc presentViewController:ac animated:YES completion:nil];
+                });
+            }
         }
     });
 }
@@ -1103,6 +1123,19 @@ static void awj_build_ui(void) {
     [ball addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
         if (!g_lic_ok) {
             UIViewController* vc = g_awj_host.rootViewController;
+            if (g_lock_msg.length > 0 && vc) {
+                UIAlertController* ac = [UIAlertController alertControllerWithTitle:@"提示"
+                                                                           message:g_lock_msg
+                                                                    preferredStyle:UIAlertControllerStyleAlert];
+                [ac addAction:[UIAlertAction actionWithTitle:@"知道了" style:UIAlertActionStyleDefault handler:nil]];
+                [ac addAction:[UIAlertAction actionWithTitle:@"输入卡密" style:UIAlertActionStyleDefault handler:^(UIAlertAction* a){
+                    lic_activate_dialog(vc, ^(BOOL ok, NSString* msg){
+                        if (ok) awj_toggle_panel();
+                    });
+                }]];
+                [vc presentViewController:ac animated:YES completion:nil];
+                return;
+            }
             lic_activate_dialog(vc, ^(BOOL ok, NSString* msg){
                 if (ok) awj_toggle_panel();
                 else LOG("activation failed: %s", msg.UTF8String);
