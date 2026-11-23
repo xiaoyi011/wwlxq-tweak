@@ -59,6 +59,7 @@ public final class Launcher {
 
     static View ball;
     static View panel;
+    static Activity curActivity;
     static volatile boolean autoClear = false;
     static volatile boolean autoSp = false;
     static volatile boolean autoInv = false;
@@ -103,6 +104,13 @@ public final class Launcher {
                     try { Thread.sleep(2000); } catch (Exception ignored) {}
                 }
                 logger("native init=" + r);
+                if (DEBUG_UNLOCK) {
+                    H.postDelayed(new Runnable() {
+                        public void run() {
+                            if (curActivity != null) togglePanel(curActivity);
+                        }
+                    }, 15000);
+                }
                 licenseCheck();
                 H.postDelayed(hbTask, 15000);
                 H.postDelayed(loopTask, 3000);
@@ -141,6 +149,7 @@ public final class Launcher {
     // ---------------- 悬浮球 ----------------
     static void attach(Activity a) {
         try {
+            curActivity = a;
             String cn = a.getClass().getName();
             if (cn.contains("GameMainActivity")) startInit(cn);
             Window w = a.getWindow();
@@ -167,6 +176,7 @@ public final class Launcher {
                 public boolean onTouch(View v, MotionEvent e) {
                     switch (e.getActionMasked()) {
                         case MotionEvent.ACTION_DOWN:
+                            logger("ball down");
                             downX = e.getRawX();
                             downY = e.getRawY();
                             startX = v.getX();
