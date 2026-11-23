@@ -770,9 +770,8 @@ static void awj_toggle_panel(void) {
     }] forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
     [sv addSubview:hpSlider];
 
-    NSArray* attrs = @[@"固定增伤", @"攻速", @"暴击", @"爆伤", @"暴击最终倍率",
-                       @"伤害加成", @"物理攻击", @"物理加成", @"万分比暴击",
-                       @"最终攻击力千分比", @"万分比伤害加成"];
+    NSArray* attrs = @[@"暴击", @"爆伤", @"伤害加成", @"最终攻击力千分比",
+                       @"物理攻击", @"攻速"];
     __block int attrIdx = 0;
     __block UISlider* valSlider = nil;
 
