@@ -963,6 +963,20 @@ static void awj_toggle_panel(void) {
         UIButton* b = awj_btn([NSString stringWithUTF8String:kGmBtns[i].title], awj_off_color(), ^{});
         b.backgroundColor = (flag && *flag) ? awj_on_color() : awj_off_color();
         place(b);
+        if (i == GM_BTN_COUNT - 1) {
+            UIButton* hint = [UIButton buttonWithType:UIButtonTypeSystem];
+            hint.userInteractionEnabled = NO;
+            hint.backgroundColor = [UIColor colorWithWhite:0.16 alpha:0.9];
+            [hint setTitle:@"音量上打开 / 音量下隐藏" forState:UIControlStateNormal];
+            [hint setTitleColor:[UIColor colorWithWhite:0.7 alpha:1] forState:UIControlStateNormal];
+            hint.layer.cornerRadius = 8;
+            place(hint);
+            hint.titleLabel.font = [UIFont systemFontOfSize:9.5];
+            hint.titleLabel.adjustsFontSizeToFitWidth = YES;
+            hint.titleLabel.minimumScaleFactor = 0.5;
+            hint.titleLabel.numberOfLines = 2;
+            hint.titleLabel.textAlignment = NSTextAlignmentCenter;
+        }
 
         if (flag) {
             [b addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
