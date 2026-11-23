@@ -678,7 +678,7 @@ static void awj_toggle_panel(void) {
         LOG("auto=%d", g_auto);
     }] forControlEvents:UIControlEventTouchUpInside];
 
-    UIButton* winBtn = awj_btn(@"直接判胜", awj_off_color(), ^{
+    UIButton* winBtn = awj_btn(@"PVP直接判胜", awj_off_color(), ^{
         ensure_resolved();
         LOG("tap: win");
         run_on_main(^{ do_win(); });
