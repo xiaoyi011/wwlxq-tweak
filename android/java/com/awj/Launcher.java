@@ -424,8 +424,6 @@ public final class Launcher {
         bClear.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { Native.clear(); }
         });
-        (void) bClear;
-
         // 应用记忆的加速
         if (savedSpeed > 1f) Native.speed(savedSpeed);
 
