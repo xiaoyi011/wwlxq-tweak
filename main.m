@@ -19,7 +19,8 @@
 #define RTLD_NOLOAD 0x10
 #endif
 
-static UIWindow* g_awj_window;
+static UIButton* g_awj_ball;
+static UIView*   g_awj_panel;
 static void awj_build_ui(void);
 
 #define TAG "[AWJ] "
@@ -280,12 +281,15 @@ static void handle(const char* cmd) {
         reply(g_img_hint[0] ? g_img_hint : "no-csharp-image");
     }
     else if (!strcmp(cmd, "u1")) {
-        dispatch_async(dispatch_get_main_queue(), ^{ awj_build_ui(); });
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (g_awj_ball) { g_awj_ball.hidden = NO; } else { awj_build_ui(); }
+        });
         reply("ok:ui1");
     }
     else if (!strcmp(cmd, "u0")) {
         dispatch_async(dispatch_get_main_queue(), ^{
-            if (g_awj_window) { g_awj_window.hidden = YES; }
+            if (g_awj_ball) g_awj_ball.hidden = YES;
+            if (g_awj_panel) { [g_awj_panel removeFromSuperview]; g_awj_panel = nil; }
         });
         reply("ok:ui0");
     }
@@ -354,17 +358,7 @@ static void* udp_thread(void* arg) {
 }
 
 // ---------------- 游戏内悬浮面板 ----------------
-@interface AWJPassthroughView : UIView
-@end
-
-@implementation AWJPassthroughView
-- (UIView*)hitTest:(CGPoint)point withEvent:(UIEvent*)event {
-    UIView* v = [super hitTest:point withEvent:event];
-    return (v == self) ? nil : v;
-}
-@end
-
-static UIView*   g_awj_panel;
+static UIWindow* g_awj_host;
 
 static UIWindowScene* awj_scene(void) {
     for (UIScene* s in UIApplication.sharedApplication.connectedScenes) {
@@ -388,7 +382,7 @@ static UIButton* awj_btn(NSString* title, UIColor* bg, void (^h)(void)) {
 }
 
 static void awj_toggle_panel(void) {
-    UIViewController* vc = g_awj_window.rootViewController;
+    if (!g_awj_host) return;
     if (g_awj_panel) {
         [g_awj_panel removeFromSuperview];
         g_awj_panel = nil;
@@ -451,27 +445,24 @@ static void awj_toggle_panel(void) {
     st.font = [UIFont systemFontOfSize:11];
     [p addSubview:st];
 
-    [vc.view addSubview:p];
+    [g_awj_host addSubview:p];
     g_awj_panel = p;
 }
 
 static void awj_build_ui(void) {
-    if (g_awj_window) return;
+    if (g_awj_ball) return;
     UIWindowScene* sc = awj_scene();
     if (!sc) return;
 
-    UIWindow* w = [[UIWindow alloc] initWithWindowScene:sc];
-    w.windowLevel = UIWindowLevelAlert + 100;
-    w.backgroundColor = UIColor.clearColor;
-    w.opaque = NO;
-    UIViewController* vc = [UIViewController new];
-    vc.view = [[AWJPassthroughView alloc] initWithFrame:UIScreen.mainScreen.bounds];
-    vc.view.backgroundColor = UIColor.clearColor;
-    w.rootViewController = vc;
-    w.hidden = NO;
-    g_awj_window = w;
+    UIWindow* host = nil;
+    for (UIWindow* w in sc.windows) {
+        if (w.isKeyWindow) { host = w; break; }
+    }
+    if (!host) host = sc.windows.firstObject;
+    if (!host) return;
+    g_awj_host = host;
 
-    CGFloat sw = sc.coordinateSpace.bounds.size.width;
+    CGFloat sw = host.bounds.size.width;
     UIButton* ball = [UIButton buttonWithType:UIButtonTypeSystem];
     ball.frame = CGRectMake(sw - 74, 240, 58, 58);
     ball.backgroundColor = [UIColor colorWithRed:0.1 green:0.55 blue:1 alpha:0.9];
@@ -483,9 +474,10 @@ static void awj_build_ui(void) {
     ball.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.6].CGColor;
     [ball addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){ awj_toggle_panel(); }]
         forControlEvents:UIControlEventTouchUpInside];
-    [vc.view addSubview:ball];
+    [host addSubview:ball];
+    g_awj_ball = ball;
 
-    LOG("ui built");
+    LOG("ui built on game window");
 }
 
 __attribute__((constructor))
@@ -497,7 +489,7 @@ static void awj_init(void) {
     pthread_create(&t, NULL, auto_thread, NULL);
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
         usleep(15 * 1000000);   // 等游戏加载完再建窗口，避免挡住启动阶段触摸
-        for (int i = 0; i < 600 && !g_awj_window; i++) {
+        for (int i = 0; i < 600 && !g_awj_ball; i++) {
             dispatch_async(dispatch_get_main_queue(), ^{ awj_build_ui(); });
             usleep(500000);
         }
