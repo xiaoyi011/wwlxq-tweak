@@ -656,15 +656,16 @@ static void awj_toggle_panel(void) {
     CGFloat w = 300;
     int gridItems = GM_BTN_COUNT + 2;
     int gridRows = (gridItems + 1) / 2;
-    CGFloat footerH = 44;
+    CGFloat footerH = 36;
     CGFloat gridH = (CGFloat)gridRows * 46.0f;
     CGFloat rowH = 40.0f;
-    CGFloat attrH = 6 * rowH;
-    CGFloat contentH = gridH + 16 + rowH + attrH + rowH + 12;
+    CGFloat attrRowH = 46.0f;
+    CGFloat attrH = 6 * attrRowH;
+    CGFloat contentH = gridH + 16 + rowH + attrH + attrRowH + 12;
     CGFloat sw = g_awj_host.bounds.size.width;
     CGFloat sh = g_awj_host.bounds.size.height;
-    // 只露出 3 个属性行，其余靠滚动
-    CGFloat hgt = MIN(36 + gridH + 16 + rowH + 1 * rowH + footerH + 8, sh * 0.8f);
+    // 只露出 1 个属性行，其余靠滚动
+    CGFloat hgt = MIN(36 + gridH + 16 + rowH + 1 * attrRowH + footerH + 8, sh * 0.8f);
 
     UIView* p = [[UIView alloc] initWithFrame:CGRectMake((sw - w) / 2, (sh - hgt) / 2, w, hgt)];
     p.backgroundColor = [UIColor colorWithRed:14/255.0 green:27/255.0 blue:46/255.0 alpha:0.94];
@@ -794,9 +795,9 @@ static void awj_toggle_panel(void) {
 
     for (int a = 0; a < (int)attrs.count; a++) {
         NSString* name = attrs[a];
-        CGFloat ry = extraY + rowH + 6 + a * rowH;
+        CGFloat ry = extraY + rowH + 6 + a * attrRowH;
 
-        UILabel* nameLab = [[UILabel alloc] initWithFrame:CGRectMake(10, ry + 6, 88, 24)];
+        UILabel* nameLab = [[UILabel alloc] initWithFrame:CGRectMake(10, ry + 2, 170, 18)];
         nameLab.text = name;
         nameLab.textColor = [UIColor colorWithWhite:0.9 alpha:1];
         nameLab.font = [UIFont boldSystemFontOfSize:12];
@@ -804,14 +805,14 @@ static void awj_toggle_panel(void) {
         nameLab.minimumScaleFactor = 0.65;
         [sv addSubview:nameLab];
 
-        UILabel* valLab = [[UILabel alloc] initWithFrame:CGRectMake(98, ry + 6, 58, 24)];
+        UILabel* valLab = [[UILabel alloc] initWithFrame:CGRectMake(w - 92, ry + 2, 72, 18)];
         valLab.text = @"0";
         valLab.textColor = [UIColor colorWithWhite:0.85 alpha:1];
         valLab.font = [UIFont systemFontOfSize:12];
         valLab.textAlignment = NSTextAlignmentRight;
         [sv addSubview:valLab];
 
-        UISlider* sl = [[UISlider alloc] initWithFrame:CGRectMake(162, ry + 9, w - 172, 18)];
+        UISlider* sl = [[UISlider alloc] initWithFrame:CGRectMake(10, ry + 22, w - 20, 18)];
         sl.minimumValue = 0;
         sl.maximumValue = 1000;
         sl.minimumTrackTintColor = [UIColor colorWithRed:0.15 green:0.6 blue:0.5 alpha:1];
@@ -847,15 +848,15 @@ static void awj_toggle_panel(void) {
 
     // 怪物血量滑条（放到最下面）
     CGFloat hy = extraY + rowH + attrH + 12;
-    UILabel* hpLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, hy + 8, 130, 24)];
+    UILabel* hpLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, hy + 2, 200, 18)];
     hpLabel.text = @"怪物血量: 100%";
     hpLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
-    hpLabel.font = [UIFont boldSystemFontOfSize:13];
+    hpLabel.font = [UIFont boldSystemFontOfSize:12];
     hpLabel.adjustsFontSizeToFitWidth = YES;
     hpLabel.minimumScaleFactor = 0.7;
     [sv addSubview:hpLabel];
 
-    UISlider* hpSlider = [[UISlider alloc] initWithFrame:CGRectMake(146, hy + 11, w - 156, 18)];
+    UISlider* hpSlider = [[UISlider alloc] initWithFrame:CGRectMake(10, hy + 22, w - 20, 18)];
     hpSlider.minimumValue = 1;
     hpSlider.maximumValue = 100;
     hpSlider.value = 100;
@@ -881,11 +882,11 @@ static void awj_toggle_panel(void) {
     [p addSubview:footer];
 
     NSString* licExp = [[NSUserDefaults standardUserDefaults] stringForKey:@"awj_license_expire"];
-    UILabel* licLabel = [[UILabel alloc] initWithFrame:CGRectMake(12, 12, w - 104, 20)];
+    UILabel* licLabel = [[UILabel alloc] initWithFrame:CGRectMake(12, 9, w - 96, 18)];
     licLabel.text = (licExp.length > 0) ? [NSString stringWithFormat:@"卡密到期: %@", licExp]
                                         : @"卡密到期: 未激活";
     licLabel.textColor = [UIColor colorWithWhite:0.85 alpha:1];
-    licLabel.font = [UIFont systemFontOfSize:12];
+    licLabel.font = [UIFont systemFontOfSize:11];
     licLabel.adjustsFontSizeToFitWidth = YES;
     licLabel.minimumScaleFactor = 0.7;
     [footer addSubview:licLabel];
@@ -897,8 +898,9 @@ static void awj_toggle_panel(void) {
         licLabel.text = @"卡密到期: 未激活";
         LOG("license unbound");
     });
-    unbindBtn.titleLabel.font = [UIFont boldSystemFontOfSize:13];
-    unbindBtn.frame = CGRectMake(w - 86, 8, 74, 28);
+    unbindBtn.titleLabel.font = [UIFont boldSystemFontOfSize:11];
+    unbindBtn.layer.cornerRadius = 6;
+    unbindBtn.frame = CGRectMake(w - 76, 6, 64, 24);
     [footer addSubview:unbindBtn];
 
     [g_awj_host addSubview:p];
