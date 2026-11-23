@@ -269,7 +269,10 @@ public final class Launcher {
                 panel = buildPanel(a);
                 try {
                     android.app.Dialog d = new android.app.Dialog(a, android.R.style.Theme_Translucent_NoTitleBar);
-                    d.setContentView(panel);
+                    FrameLayout holder = new FrameLayout(a);
+                    holder.addView(panel);
+                    d.setContentView(holder, new ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
                     android.view.Window w = d.getWindow();
                     if (w != null) {
                         w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
