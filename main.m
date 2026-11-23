@@ -175,33 +175,11 @@ typedef struct {
 } GmBtn;
 
 static const GmBtn kGmBtns[] = {
-    {"清场（杀光怪物）",      "OnKillMonster", 0, 0},
     {"攻击速度 +100000",      "OnCheatClick", 0, 0},
     {"SP 拉满",               "OnSpClick", 0, 0},
-    {"城墙无敌（双方）",       "OnInvulnerableStationClick", 0, 0},
     {"城墙无敌（仅我方）",     "OnSelfInvulnerableStationClick", 0, 0},
     {"2倍/4倍 加速",          "OnSpeedUpClicked", 0, 0},
-    {"暂停刷怪",              "OnPauseGenUnitClicked", 0, 0},
     {"冻结怪物移动",           "OnStopMonsterMoveClicked", 0, 0},
-    {"点杀模式",              "OnPointKillMonsterClicked", 0, 0},
-    {"禁用角色技能",           "OnDisableRoleSkillClicked", 0, 0},
-    {"解锁所有格子",           "OnUnlockAllGridClick", 0, 0},
-    {"帮助开格",              "OnHelpOpenGridClick", 0, 0},
-    {"手动刷怪",              "OnManualGenUnit", 0, 0},
-    {"PVP 判胜（3星）",       "OnKillRobotClick", 1, 3},
-    {"一键失败",              "OnKillSelf", 0, 0},
-    {"杀己方怪物",            "OnKillSelfMonster", 0, 0},
-    {"杀己方小怪",            "OnKillSelfSmallMonster", 0, 0},
-    {"战斗信息",              "OnShowBattleInfoClick", 0, 0},
-    {"伤害统计",              "OnOpenDamageStatisticsClicked", 0, 0},
-    {"实体信息",              "OnShowEntityTop", 0, 0},
-    {"切换 AI",               "OnOpenAIClick", 0, 0},
-    {"怪物属性",              "OnMonsterAttrClick", 0, 0},
-    {"英雄详情模式",           "OnHeroDetailsModeClick", 0, 0},
-    {"肉鸽调试",              "OnRogueDebugClicked", 0, 0},
-    {"肉鸽无限刷新",           "OnAddRougeRefreshCountClicked", 0, 0},
-    {"肉鸽快速选择",           "OnSingleRogueClick", 0, 0},
-    {"导出战斗录像",           "OnExportBattleReplayClick", 0, 0},
 };
 
 #define GM_BTN_COUNT ((int)(sizeof(kGmBtns) / sizeof(kGmBtns[0])))
@@ -541,7 +519,9 @@ static void awj_toggle_panel(void) {
         return;
     }
 
-    CGFloat w = 228, hgt = 452;
+    CGFloat w = 228;
+    CGFloat rowsH = (GM_BTN_COUNT + 2) * 46 + 14;
+    CGFloat hgt = MIN(452, 32 + rowsH + 56);
     UIView* p = [[UIView alloc] initWithFrame:CGRectMake(8, 96, w, hgt)];
     p.backgroundColor = [UIColor colorWithWhite:0.08 alpha:0.94];
     p.layer.cornerRadius = 14;
