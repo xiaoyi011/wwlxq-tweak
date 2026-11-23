@@ -2,6 +2,8 @@ package com.awj;
 
 import android.app.Activity;
 import android.app.Application;
+import android.app.Dialog;
+import android.view.WindowManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -147,62 +149,97 @@ public final class Launcher {
     }
 
     // ---------------- 悬浮球 ----------------
+    static Dialog ballDlg;
+    static Activity ballAct;
+    static Window ballWin;
+
     static void attach(Activity a) {
         try {
             curActivity = a;
             String cn = a.getClass().getName();
             if (cn.contains("GameMainActivity")) startInit(cn);
-            Window w = a.getWindow();
-            if (w == null) return;
-            final FrameLayout root = (FrameLayout) w.getDecorView();
-            if (root.findViewById(0xA1A1) != null) return;
+            ensureBall(a);
+        } catch (Throwable t) {
+            logger("attach err " + t);
+        }
+    }
 
-            final TextView b = new TextView(a);
-            b.setId(0xA1A1);
+    static void dismissBall() {
+        if (ballDlg != null) {
+            try { ballDlg.dismiss(); } catch (Throwable ignored) {}
+            ballDlg = null;
+            ballWin = null;
+            ball = null;
+        }
+    }
+
+    static void ensureBall(final Activity act) {
+        if (act == null || act.isFinishing()) return;
+        if (!licensed) { dismissBall(); return; }
+        if (ballDlg != null && ballAct == act && ballDlg.isShowing()) return;
+        dismissBall();
+        try {
+            final Dialog d = new Dialog(act, android.R.style.Theme_Translucent_NoTitleBar);
+            final TextView b = new TextView(act);
             b.setText("逸");
             b.setTextColor(C_TEXT);
             b.setGravity(Gravity.CENTER);
             b.setTextSize(15);
             b.setBackground(bg(0xE61A8CFF, 22));
-            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(44), dp(44));
-            lp.gravity = Gravity.TOP | Gravity.END;
-            lp.topMargin = dp(240);
-            lp.rightMargin = dp(16);
-            b.setLayoutParams(lp);
-            // 点击 + 拖动
+            FrameLayout holder = new FrameLayout(act);
+            holder.addView(b, new FrameLayout.LayoutParams(dp(44), dp(44)));
+            d.setContentView(holder, new ViewGroup.LayoutParams(dp(52), dp(52)));
+            final Window w = d.getWindow();
+            w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+            w.setGravity(Gravity.TOP | Gravity.LEFT);
+            w.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                    | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                    | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+            final WindowManager.LayoutParams lp0 = w.getAttributes();
+            lp0.width = dp(52);
+            lp0.height = dp(52);
+            lp0.x = app.getResources().getDisplayMetrics().widthPixels - dp(70);
+            lp0.y = dp(240);
+            w.setAttributes(lp0);
+            w.setDimAmount(0f);
+            d.show();
+            ballDlg = d;
+            ballAct = act;
+            ballWin = w;
+            ball = b;
             b.setOnTouchListener(new View.OnTouchListener() {
-                float downX, downY, startX, startY;
+                float downX, downY;
+                int startX, startY;
                 boolean moved;
                 public boolean onTouch(View v, MotionEvent e) {
+                    WindowManager.LayoutParams lp = ballWin.getAttributes();
                     switch (e.getActionMasked()) {
                         case MotionEvent.ACTION_DOWN:
-                            logger("ball down");
                             downX = e.getRawX();
                             downY = e.getRawY();
-                            startX = v.getX();
-                            startY = v.getY();
+                            startX = lp.x;
+                            startY = lp.y;
                             moved = false;
                             return true;
                         case MotionEvent.ACTION_MOVE: {
                             float dx = e.getRawX() - downX;
                             float dy = e.getRawY() - downY;
                             if (Math.abs(dx) > dp(6) || Math.abs(dy) > dp(6)) moved = true;
-                            v.setX(startX + dx);
-                            v.setY(startY + dy);
+                            lp.x = startX + (int) dx;
+                            lp.y = startY + (int) dy;
+                            ballWin.setAttributes(lp);
                             return true;
                         }
                         case MotionEvent.ACTION_UP:
-                            if (!moved) onBallClick(a);
+                            logger("ball up moved=" + moved);
+                            if (!moved) onBallClick(ballAct);
                             return true;
                     }
                     return false;
                 }
             });
-            root.addView(b);
-            ball = b;
-            updateBallVisibility();
         } catch (Throwable t) {
-            logger("attach err " + t);
+            logger("ball dlg err " + t);
         }
     }
 
@@ -231,17 +268,28 @@ public final class Launcher {
         } catch (Throwable ignored) {}
     }
 
-    static void setBallVisible(boolean v) {
-        final boolean vis = v;
+    static void setBallVisible(final boolean v) {
         H.post(new Runnable() {
             public void run() {
-                if (ball != null) ball.setVisibility(vis ? View.VISIBLE : View.GONE);
+                if (v) {
+                    Activity a = topActivity();
+                    if (a == null) a = curActivity;
+                    ensureBall(a);
+                } else {
+                    dismissBall();
+                }
             }
         });
     }
 
     static void updateBallVisibility() {
-        if (ball != null) ball.setVisibility(licensed ? View.VISIBLE : View.GONE);
+        if (licensed) {
+            Activity a = topActivity();
+            if (a == null) a = curActivity;
+            ensureBall(a);
+        } else {
+            dismissBall();
+        }
     }
 
     static void onBallClick(final Activity a) {
