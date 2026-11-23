@@ -649,7 +649,7 @@ static void awj_toggle_panel(void) {
     CGFloat w = 300;
     int gridItems = GM_BTN_COUNT + 2;
     int gridRows = (gridItems + 1) / 2;
-    CGFloat rowsH = gridRows * 46 + 92 + 66 + 14;
+    CGFloat rowsH = gridRows * 46 + 138 + 66 + 14;
     CGFloat hgt = MIN(640, 44 + rowsH);
     CGFloat sw = g_awj_host.bounds.size.width;
     CGFloat sh = g_awj_host.bounds.size.height;
@@ -683,7 +683,7 @@ static void awj_toggle_panel(void) {
     CGFloat listH = hgt - 44;
     UIScrollView* sv = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 36, w, listH)];
     sv.showsVerticalScrollIndicator = YES;
-    sv.contentSize = CGSizeMake(w, gridRows * 46 + 92 + 66 + 8);
+    sv.contentSize = CGSizeMake(w, gridRows * 46 + 138 + 66 + 8);
     [p addSubview:sv];
 
     __block int gr = 0, gc = 0;
@@ -772,40 +772,72 @@ static void awj_toggle_panel(void) {
     hpBtn.frame = CGRectMake(192, extraY, 98, 40);
     [sv addSubview:hpBtn];
 
-    UITextField* attrField = [[UITextField alloc] initWithFrame:CGRectMake(10, extraY + 46, 100, 40)];
-    attrField.backgroundColor = awj_off_color();
-    attrField.textColor = UIColor.whiteColor;
-    attrField.textAlignment = NSTextAlignmentCenter;
-    attrField.layer.cornerRadius = 8;
-    attrField.font = [UIFont systemFontOfSize:13];
-    attrField.placeholder = @"属性名";
-    [sv addSubview:attrField];
+    NSArray* attrs = @[@"暴击", @"爆伤", @"攻速", @"物理攻击", @"伤害加成",
+                       @"伤害减免", @"最大血量", @"移速", @"命中", @"闪避"];
+    __block int attrIdx = 0;
+    __block UISlider* valSlider = nil;
 
-    UITextField* valField = [[UITextField alloc] initWithFrame:CGRectMake(116, extraY + 46, 76, 40)];
-    valField.backgroundColor = awj_off_color();
-    valField.textColor = UIColor.whiteColor;
-    valField.textAlignment = NSTextAlignmentCenter;
-    valField.keyboardType = UIKeyboardTypeNumbersAndPunctuation;
-    valField.layer.cornerRadius = 8;
-    valField.font = [UIFont systemFontOfSize:13];
-    valField.placeholder = @"数值";
-    [sv addSubview:valField];
+    UIButton* attrPick = awj_btn([NSString stringWithFormat:@"属性: %@  ▾", attrs[0]], awj_off_color(), ^{});
+    attrPick.titleLabel.adjustsFontSizeToFitWidth = YES;
+    attrPick.titleLabel.minimumScaleFactor = 0.7;
+    attrPick.frame = CGRectMake(10, extraY + 46, 180, 40);
+    [sv addSubview:attrPick];
 
-    UIButton* attrBtn = awj_btn(@"修改属性", awj_off_color(), ^{
-        NSString* a = [attrField.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-        if (a.length == 0) { LOG("attr empty"); return; }
-        long v = valField.text.longLongValue;
-        NSString* c = [NSString stringWithFormat:@"修改英雄属性 %@ %ld", a, v];
-        LOG("cmd attr %@ %ld", a, v);
+    UIButton* attrApply = awj_btn(@"应用属性", awj_off_color(), ^{
+        int v = (int)(roundf(valSlider.value)) * 1000;
+        if (v <= 0) { LOG("attr val 0"); return; }
+        NSString* c = [NSString stringWithFormat:@"修改英雄属性 %@ %d", attrs[attrIdx], v];
+        LOG("cmd attr %@ %d", attrs[attrIdx], v);
         run_on_main(^{ exec_cmd([c UTF8String]); });
     });
-    attrBtn.titleLabel.adjustsFontSizeToFitWidth = YES;
-    attrBtn.titleLabel.minimumScaleFactor = 0.7;
-    attrBtn.frame = CGRectMake(196, extraY + 46, 94, 40);
-    [sv addSubview:attrBtn];
+    attrApply.titleLabel.adjustsFontSizeToFitWidth = YES;
+    attrApply.titleLabel.minimumScaleFactor = 0.7;
+    attrApply.frame = CGRectMake(196, extraY + 46, 94, 40);
+    [sv addSubview:attrApply];
+
+    __weak UIButton* weakPick = attrPick;
+    [attrPick addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+        UIAlertController* ac = [UIAlertController alertControllerWithTitle:@"选择属性"
+                                                                  message:nil
+                                                           preferredStyle:UIAlertControllerStyleActionSheet];
+        for (int k = 0; k < (int)attrs.count; k++) {
+            int kk = k;
+            [ac addAction:[UIAlertAction actionWithTitle:attrs[k]
+                                                  style:UIAlertActionStyleDefault
+                                                handler:^(UIAlertAction* act){
+                attrIdx = kk;
+                [weakPick setTitle:[NSString stringWithFormat:@"属性: %@  ▾", attrs[kk]]
+                          forState:UIControlStateNormal];
+            }]];
+        }
+        [ac addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+        UIViewController* vc = g_awj_host.rootViewController;
+        if (vc) {
+            ac.popoverPresentationController.sourceView = weakPick;
+            ac.popoverPresentationController.sourceRect = weakPick.bounds;
+            [vc presentViewController:ac animated:YES completion:nil];
+        }
+    }] forControlEvents:UIControlEventTouchUpInside];
+
+    UILabel* valLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, extraY + 92, w - 20, 18)];
+    valLabel.text = @"属性值: 5000";
+    valLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
+    valLabel.font = [UIFont boldSystemFontOfSize:13];
+    [sv addSubview:valLabel];
+
+    valSlider = [[UISlider alloc] initWithFrame:CGRectMake(10, extraY + 92 + 22, w - 20, 20)];
+    valSlider.minimumValue = 0;
+    valSlider.maximumValue = 1000;
+    valSlider.value = 5;
+    valSlider.minimumTrackTintColor = [UIColor colorWithRed:0.15 green:0.6 blue:0.5 alpha:1];
+    [valSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
+        int v = (int)(roundf(valSlider.value)) * 1000;
+        valLabel.text = [NSString stringWithFormat:@"属性值: %d", v];
+    }] forControlEvents:UIControlEventValueChanged];
+    [sv addSubview:valSlider];
 
     // 自定义加速滑条 1x - 32x
-    CGFloat sliderTop = extraY + 92 + 4;
+    CGFloat sliderTop = extraY + 138 + 4;
     UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, sliderTop, w - 20, 18)];
     spdLabel.text = @"加速: 1x";
     spdLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
