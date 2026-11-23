@@ -596,8 +596,8 @@ static void awj_make_draggable(UIView* handle, UIView* target) {
     [handle addGestureRecognizer:pan];
 }
 
-static UIColor* awj_off_color(void) { return [UIColor colorWithWhite:0.24 alpha:1]; }
-static UIColor* awj_on_color(void)  { return [UIColor colorWithRed:0.15 green:0.58 blue:0.45 alpha:1]; }
+static UIColor* awj_off_color(void) { return [UIColor colorWithRed:34/255.0 green:48/255.0 blue:74/255.0 alpha:1]; }
+static UIColor* awj_on_color(void)  { return [UIColor colorWithRed:31/255.0 green:174/255.0 blue:140/255.0 alpha:1]; }
 
 static void awj_flash(UIButton* b) {
     b.backgroundColor = awj_on_color();
@@ -624,10 +624,10 @@ static void awj_toggle_panel(void) {
     CGFloat sh = g_awj_host.bounds.size.height;
 
     UIView* p = [[UIView alloc] initWithFrame:CGRectMake((sw - w) / 2, (sh - hgt) / 2, w, hgt)];
-    p.backgroundColor = [UIColor colorWithWhite:0.08 alpha:0.94];
+    p.backgroundColor = [UIColor colorWithRed:14/255.0 green:27/255.0 blue:46/255.0 alpha:0.94];
     p.layer.cornerRadius = 14;
     p.layer.borderWidth = 1;
-    p.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.25].CGColor;
+    p.layer.borderColor = [UIColor colorWithRed:90/255.0 green:150/255.0 blue:220/255.0 alpha:0.5].CGColor;
 
     UIView* bar = [[UIView alloc] initWithFrame:CGRectMake(0, 0, w, 36)];
     [p addSubview:bar];
@@ -758,12 +758,12 @@ static void awj_build_ui(void) {
 
     CGFloat sw = host.bounds.size.width;
     UIButton* ball = [UIButton buttonWithType:UIButtonTypeSystem];
-    ball.frame = CGRectMake(sw - 74, 240, 58, 58);
+    ball.frame = CGRectMake(sw - 60, 240, 44, 44);
     ball.backgroundColor = [UIColor colorWithRed:0.1 green:0.55 blue:1 alpha:0.9];
     [ball setTitle:@"逸" forState:UIControlStateNormal];
     [ball setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
-    ball.titleLabel.font = [UIFont boldSystemFontOfSize:17];
-    ball.layer.cornerRadius = 29;
+    ball.titleLabel.font = [UIFont boldSystemFontOfSize:15];
+    ball.layer.cornerRadius = 22;
     ball.layer.borderWidth = 1.5;
     ball.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.6].CGColor;
     [ball addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){ awj_toggle_panel(); }]
