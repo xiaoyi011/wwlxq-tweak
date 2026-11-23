@@ -256,6 +256,29 @@ public final class Launcher {
     // ---------------- 面板 ----------------
     static android.app.Dialog panelDlg;
 
+    static Activity topActivity() {
+        try {
+            Class<?> at = Class.forName("android.app.ActivityThread");
+            Object thread = at.getMethod("currentActivityThread").invoke(null);
+            java.lang.reflect.Field f = at.getDeclaredField("mActivities");
+            f.setAccessible(true);
+            java.util.Map<?, ?> acts = (java.util.Map<?, ?>) f.get(thread);
+            if (acts != null) {
+                for (Object rec : acts.values()) {
+                    java.lang.reflect.Field pf = rec.getClass().getDeclaredField("paused");
+                    pf.setAccessible(true);
+                    if (!((Boolean) pf.get(rec))) {
+                        java.lang.reflect.Field af = rec.getClass().getDeclaredField("activity");
+                        af.setAccessible(true);
+                        Object a = af.get(rec);
+                        if (a instanceof Activity) return (Activity) a;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        return null;
+    }
+
     static void togglePanel(final Activity a) {
         H.post(new Runnable() {
             public void run() {
@@ -265,10 +288,13 @@ public final class Launcher {
                     panel = null;
                     return;
                 }
-                if (a == null || a.isFinishing()) return;
-                panel = buildPanel(a);
+                Activity act = topActivity();
+                if (act == null || act.isFinishing()) act = a;
+                if (act == null || act.isFinishing()) return;
+                logger("panel activity=" + act.getClass().getName());
+                panel = buildPanel(act);
                 try {
-                    android.app.Dialog d = new android.app.Dialog(a, android.R.style.Theme_Translucent_NoTitleBar);
+                    android.app.Dialog d = new android.app.Dialog(act, android.R.style.Theme_Translucent_NoTitleBar);
                     FrameLayout holder = new FrameLayout(a);
                     holder.addView(panel);
                     d.setContentView(holder, new ViewGroup.LayoutParams(
