@@ -117,6 +117,8 @@ static void* g_m_cheat;            // BattleDebugActionView.OnCheatClick
 static void* g_m_kill_robot;       // BattleDebugActionView.OnKillRobotClick
 static void* g_bpvp_field;         // BaseViewExtend.battlePvpProxy (static)
 static void* g_m_set_result;       // BattlePvpProxy.SetBattleResult(BattleResult, bool)
+static void* g_bproxy_field;       // BattlePvpProxy.battleProxy (instance)
+static void* g_m_is_pvp;           // BattleProxy.IsPvp()
 static void* g_m_get_entity;       // BattleEntityProxy.GetEntity
 static void* g_proxy_field;        // BattleReduceHpCtrl.battleEntityProxy
 static size_t g_proxy_offset;
@@ -203,9 +205,15 @@ static int resolve_game(void) {
 
     void* bve = class_of(g_image, "BaseViewExtend");
     void* bpp = class_of(g_image, "BattlePvpProxy");
+    void* bp  = class_of(g_image, "BattleProxy");
     if (bve) g_bpvp_field = x_class_get_field_from_name(bve, "battlePvpProxy");
-    if (bpp) g_m_set_result = x_class_get_method_from_name(bpp, "SetBattleResult", 2);
-    LOG("set_result=%d proxy_field=%d", g_m_set_result != NULL, g_bpvp_field != NULL);
+    if (bpp) {
+        g_m_set_result = x_class_get_method_from_name(bpp, "SetBattleResult", 2);
+        g_bproxy_field = x_class_get_field_from_name(bpp, "battleProxy");
+    }
+    if (bp) g_m_is_pvp = x_class_get_method_from_name(bp, "IsPvp", 0);
+    LOG("set_result=%d is_pvp=%d bproxy=%d", g_m_set_result != NULL,
+        g_m_is_pvp != NULL, g_bproxy_field != NULL);
 
     LOG("game resolved");
     return 1;
@@ -255,31 +263,45 @@ static void do_cheat(void) {
     LOG("cheat done");
 }
 
+static int is_pvp_battle(void) {
+    // 返回 1=PVP, 0=非PVP, -1=无法判断
+    if (!g_bpvp_field || !g_bproxy_field || !g_m_is_pvp) return -1;
+    void* proxy = NULL;
+    x_field_static_get_value(g_bpvp_field, &proxy);
+    if (!proxy) return -1;
+    void* bp = NULL;
+    x_field_get_value(proxy, g_bproxy_field, &bp);
+    if (!bp) return -1;
+    void* exc = NULL;
+    void* r = x_runtime_invoke(g_m_is_pvp, bp, NULL, &exc);
+    if (exc || !r) return -1;
+    return *(uint8_t*)r ? 1 : 0;
+}
+
 static void do_win(void) {
-    // 直接设置战斗结果为胜利：PVP 与单人关卡都生效
-    if (g_bpvp_field && g_m_set_result) {
+    int pvp = is_pvp_battle();
+    LOG("win: pvp=%d", pvp);
+
+    if (pvp != 0) {
+        // PVP：直接设置结果为胜利
         void* proxy = NULL;
         x_field_static_get_value(g_bpvp_field, &proxy);
-        if (proxy) {
-            int32_t r = 1;      // BattleDefine.BattleResult.win
-            uint8_t force = 1;  // isForceEnd
+        if (proxy && g_m_set_result) {
+            int32_t r = 1;
+            uint8_t force = 1;
             void* params[2] = { &r, &force };
             void* exc = NULL;
             x_runtime_invoke(g_m_set_result, proxy, params, &exc);
-            if (exc) LOG("win: set_result exception");
-            else { LOG("win done (set_result)"); return; }
-        } else {
-            LOG("win: proxy null");
+            if (!exc) { LOG("win done (pvp set_result)"); return; }
+            LOG("win: set_result exception");
         }
     }
-    // 回退：调试面板的 PVP 判胜
+
+    // 非 PVP：杀光怪物，让游戏按正常流程结算并发奖励
     void* v = view();
     if (!v) { LOG("win: no view"); return; }
-    int star = 3;
-    void* params[1] = { &star };
-    void* exc = NULL;
-    x_runtime_invoke(g_m_kill_robot, v, params, &exc);
-    if (exc) LOG("win exception"); else LOG("win done (kill_robot)");
+    invoke0(g_m_kill_monster, v, "win-clear");
+    LOG("win done (pve clear)");
 }
 
 // 主线程执行游戏调用
