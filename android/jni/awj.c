@@ -310,6 +310,51 @@ static int resolve_game(void) {
         }
         LOGI("msig hits=%d", mhits);
     }
+    if (x_image_get_class_count && x_image_get_class && x_class_get_name &&
+        x_class_get_fields && x_field_get_name) {
+        size_t cc3 = x_image_get_class_count(g_image);
+        for (size_t i = 0; i < cc3; i++) {
+            void* c = x_image_get_class(g_image, i);
+            const char* n = c ? x_class_get_name(c) : NULL;
+            if (!n) continue;
+            int want = 0;
+            if (strstr(n, "AttrType")) want = 1;
+            else if (strcmp(n, "BattleProxy") == 0 || strcmp(n, "BattleEntityProxy") == 0 ||
+                     strcmp(n, "BattleBaseEntity") == 0 || strcmp(n, "BattleHeroEntity") == 0 ||
+                     strcmp(n, "KvData") == 0) want = 2;
+            if (!want) continue;
+            LOGI("PROBE cls %s", n);
+            void* it = NULL;
+            void* f;
+            int k = 0;
+            while ((f = x_class_get_fields(c, &it)) != NULL && k < 40) {
+                const char* fn = x_field_get_name(f);
+                void* t = x_field_get_type(f);
+                const char* tn = t ? x_type_get_name(t) : NULL;
+                LOGI("  F %s : %s", fn ? fn : "?", tn ? tn : "?");
+                if (want == 1 && fn && x_field_static_get_value) {
+                    int64_t val = 0;
+                    x_field_static_get_value(f, &val);
+                    LOGI("    V %s=%lld", fn, (long long)val);
+                }
+                k++;
+            }
+            if (x_class_get_methods && x_method_get_name) {
+                it = NULL;
+                void* m;
+                k = 0;
+                while ((m = x_class_get_methods(c, &it)) != NULL && k < 60) {
+                    const char* mn = x_method_get_name(m);
+                    if (mn && (strstr(mn, "Entity") || strstr(mn, "Attr") ||
+                               strstr(mn, "Role") || strstr(mn, "Hero"))) {
+                        LOGI("  M %s", mn);
+                    }
+                    k++;
+                }
+            }
+        }
+        LOGI("probe done");
+    }
     LOGI("resolved: kill=%d cheat=%d win=%d lua=%d speed=%d",
          g_m_kill_monster != NULL, g_m_cheat != NULL, g_m_kill_robot != NULL,
          g_m_exec_lua != NULL, g_m_set_speed != NULL);
