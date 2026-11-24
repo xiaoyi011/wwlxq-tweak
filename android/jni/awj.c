@@ -466,7 +466,7 @@ static int resolve_game(void) {
         x_class_get_fields && x_field_get_name) {
         size_t cw = x_image_get_class_count(g_image);
         int shown = 0;
-        for (size_t i = 0; i < cw && shown < 15; i++) {
+        for (size_t i = 0; i < cw && shown < 40; i++) {
             void* c = x_image_get_class(g_image, i);
             const char* n = c ? x_class_get_name(c) : NULL;
             if (!n) continue;
@@ -496,6 +496,39 @@ static int resolve_game(void) {
             }
         }
         LOGI("wallscan shown=%d", shown);
+    }
+    {
+        static const char* w2[] = {"EntityData", "BattleRampartStrategyEntity", "BattleRampartEntity"};
+        for (int i = 0; i < 3; i++) {
+            void* c = class_of(g_image, w2[i]);
+            if (!c) c = x_class_from_name(g_image, "Game.BussinessData", w2[i]);
+            if (!c) { LOGI("W2 %s missing", w2[i]); continue; }
+            LOGI("W2 %s", w2[i]);
+            if (x_class_get_fields && x_field_get_name) {
+                void* it = NULL;
+                void* f;
+                int k = 0;
+                while ((f = x_class_get_fields(c, &it)) != NULL && k < 30) {
+                    const char* fn = x_field_get_name(f);
+                    if (fn) LOGI("  W2F %s", fn);
+                    k++;
+                }
+            }
+        }
+        void* ep = class_of(g_image, "BattleEntityProxy");
+        if (ep && x_class_get_methods && x_method_get_name) {
+            void* it = NULL;
+            void* m;
+            int k = 0;
+            while ((m = x_class_get_methods(ep, &it)) != NULL && k < 120) {
+                const char* mn = x_method_get_name(m);
+                if (mn && (strstr(mn, "Rampart") || strstr(mn, "Wall") ||
+                           strstr(mn, "Station") || strstr(mn, "Tower")))
+                    LOGI("W2M %s", mn);
+                k++;
+            }
+        }
+        LOGI("w2 done");
     }
     LOGI("resolved: kill=%d cheat=%d win=%d lua=%d speed=%d",
          g_m_kill_monster != NULL, g_m_cheat != NULL, g_m_kill_robot != NULL,
