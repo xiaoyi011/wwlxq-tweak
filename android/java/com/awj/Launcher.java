@@ -560,25 +560,25 @@ public final class Launcher {
                 autoClear = !autoClear;
                 bClear.setBackground(bg(autoClear ? C_ON : C_BTN, 8));
                 bClear.setText(autoClear ? "自动清场：开" : "自动清场");
-                Toast.makeText(app, autoClear ? "自动清场 已开启" : "自动清场 已关闭", Toast.LENGTH_SHORT).show();
+                
                 if (autoClear) Native.clear();
             }
         });
         bWin.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Toast.makeText(app, "PVP直接胜利 已执行", Toast.LENGTH_SHORT).show();
+                
                 Native.win();
             }
         });
         bSp.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Toast.makeText(app, "无限银币 已执行", Toast.LENGTH_SHORT).show();
+                
                 Native.sp();
             }
         });
         bInv.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Toast.makeText(app, "无敌 已执行", Toast.LENGTH_SHORT).show();
+                
                 Native.inv();
             }
         });
