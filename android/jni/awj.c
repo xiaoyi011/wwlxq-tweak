@@ -832,6 +832,44 @@ static void probe_param_types(const char* cn) {
     LOGI("P4 %s done=%d", cn, n);
 }
 
+static void dump_cls_fields(void* c, const char* tag) {
+    if (!c) { LOGI("P5 %s class null", tag); return; }
+    const char* nm = x_class_get_name ? x_class_get_name(c) : "?";
+    const char* ns = x_class_get_namespace ? x_class_get_namespace(c) : "?";
+    LOGI("P5 %s = %s.%s", tag, ns ? ns : "?", nm ? nm : "?");
+    if (!x_class_get_fields || !x_field_get_name) return;
+    void* it = NULL; void* f; int n = 0;
+    while ((f = x_class_get_fields(c, &it)) != NULL && n < 80) {
+        const char* fn = x_field_get_name(f);
+        void* ft = x_field_get_type ? x_field_get_type(f) : NULL;
+        const char* tn = ft && x_type_get_name ? x_type_get_name(ft) : "?";
+        size_t off = x_field_get_offset ? x_field_get_offset(f) : 0;
+        LOGI("P5F %s::%s : %s off=%zu", tag, fn ? fn : "?", tn ? tn : "?", off);
+        n++;
+    }
+    LOGI("P5 %s fields=%d", tag, n);
+}
+
+static void probe_result_type(void) {
+    void* bpp = class_of(g_image, "BattlePvpProxy");
+    if (!bpp) { LOGI("P5 BattlePvpProxy null"); return; }
+    void* rf = x_class_get_field_from_name ? x_class_get_field_from_name(bpp, "result") : NULL;
+    LOGI("P5 result field=%p", rf);
+    void* rt = rf && x_field_get_type ? x_field_get_type(rf) : NULL;
+    void* rc = rt && x_class_from_type ? x_class_from_type(rt) : NULL;
+    LOGI("P5 result type=%p class=%p", rt, rc);
+    dump_cls_fields(rc, "BattleResult");
+    if (rc && x_class_get_methods) {
+        void* it = NULL; void* m; int n = 0;
+        while ((m = x_class_get_methods(rc, &it)) != NULL && n < 30) {
+            const char* mn = x_method_get_name(m);
+            uint32_t pc = x_method_get_param_count ? x_method_get_param_count(m) : 0;
+            LOGI("P5M BattleResult::%s pc=%u ptr=%p", mn ? mn : "?", pc, x_method_get_pointer ? x_method_get_pointer(m) : NULL);
+            n++;
+        }
+    }
+    dump_cls_fields(class_of(g_image, "Sc16510"), "Sc16510");
+}
 static void probe_result_obj(void) {
     void* c = class_of(g_image, "BattleResult");
     if (!c) { LOGI("P4 BattleResult: null"); return; }
@@ -961,7 +999,7 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
     if (r) {
         probe_update_ptrs();
         probe_settle_api();
-        probe_result_obj();
+        probe_result_type();
         probe_param_types("SettleBattleEvent");
         probe_param_types("BattlePvpProxy");
         probe_scan_classes();
