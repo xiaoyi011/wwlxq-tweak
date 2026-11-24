@@ -456,30 +456,30 @@ public final class Launcher {
         final LinearLayout p = new LinearLayout(app);
         p.setOrientation(LinearLayout.VERTICAL);
         p.setBackground(bg(0xF216233A, 14));
-        p.setPadding(dp(12), dp(8), dp(12), dp(10));
+        p.setPadding(dp(12), dp(4), dp(12), dp(6));
 
         FrameLayout titleRow = new FrameLayout(app);
         TextView title = new TextView(app);
         title.setText("小逸");
         title.setTextColor(C_TEXT);
-        title.setTextSize(17);
+        title.setTextSize(15);
         title.setGravity(Gravity.CENTER);
         titleRow.addView(title, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(26)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(20)));
         TextView close = new TextView(app);
         close.setText("×");
         close.setTextColor(C_TEXT);
-        close.setTextSize(20);
+        close.setTextSize(18);
         close.setGravity(Gravity.CENTER);
         close.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { closePanel(); }
         });
-        FrameLayout.LayoutParams clp = new FrameLayout.LayoutParams(dp(36), dp(26));
+        FrameLayout.LayoutParams clp = new FrameLayout.LayoutParams(dp(32), dp(20));
         clp.gravity = Gravity.END;
         titleRow.addView(close, clp);
         attachDrag(titleRow);
         p.addView(titleRow, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(26)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(20)));
 
         final TextView bClear = mkBtn("自动清场", C_BTN);
         final TextView bWin = mkBtn("PVP直接胜利", C_BTN);
@@ -536,15 +536,15 @@ public final class Launcher {
         LinearLayout foot = new LinearLayout(app);
         foot.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(26));
-        flp.topMargin = dp(6);
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(20));
+        flp.topMargin = dp(4);
         foot.setLayoutParams(flp);
         TextView exp = new TextView(app);
         exp.setText("卡密到期: " + (expireText.length() > 0 ? expireText : "-"));
         exp.setTextColor(C_DIM);
         exp.setTextSize(11);
         exp.setGravity(Gravity.CENTER_VERTICAL);
-        foot.addView(exp, new LinearLayout.LayoutParams(0, dp(26), 1));
+        foot.addView(exp, new LinearLayout.LayoutParams(0, dp(20), 1));
         final TextView unbind = mkBtn(unbindLeft >= 0 ? ("解绑(" + unbindLeft + ")") : "解绑", C_BTN);
         unbind.setTextSize(10);
         unbind.setPadding(dp(10), 0, dp(10), 0);
@@ -552,7 +552,7 @@ public final class Launcher {
             public void onClick(View v) { doUnbind(unbind); }
         });
         foot.addView(unbind, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(22)));
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(18)));
         p.addView(foot);
 
         bClear.setOnClickListener(new View.OnClickListener() {
