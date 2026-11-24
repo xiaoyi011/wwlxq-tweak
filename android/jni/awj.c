@@ -40,6 +40,7 @@ static size_t (*x_image_get_class_count)(void*);
 static void* (*x_image_get_class)(void*, size_t);
 static const char* (*x_class_get_name)(void*);
 static void* (*x_field_get_type)(void*);
+static uint32_t (*x_field_get_flags)(void*);
 static const char* (*x_type_get_name)(void*);
 static uint32_t (*x_method_get_param_count)(void*);
 static void* (*x_method_get_param)(void*, uint32_t);
@@ -80,6 +81,7 @@ static int resolve_api(void) {
     RESOLVE(x_image_get_class, "il2cpp_image_get_class");
     RESOLVE(x_class_get_name, "il2cpp_class_get_name");
     RESOLVE(x_field_get_type, "il2cpp_field_get_type");
+    RESOLVE(x_field_get_flags, "il2cpp_field_get_flags");
     RESOLVE(x_type_get_name, "il2cpp_type_get_name");
     RESOLVE(x_method_get_param_count, "il2cpp_method_get_param_count");
     RESOLVE(x_method_get_param, "il2cpp_method_get_param");
@@ -829,7 +831,9 @@ Java_com_awj_Native_ready(JNIEnv* env, jclass cls) {
 
 static int in_battle(void) {
     if (!g_bpvp_field || !g_bproxy_field || !g_f_is_battle) return 0;
-    if (!x_field_static_get_value || !x_field_get_value) return 0;
+    if (!x_field_static_get_value || !x_field_get_value || !x_field_get_flags) return 0;
+    // battlePvpProxy 必须是静态字段，否则跳过（避免误读导致崩溃）
+    if ((x_field_get_flags(g_bpvp_field) & 0x10) == 0) return 0;
     void* pp = NULL;
     x_field_static_get_value(g_bpvp_field, &pp);
     if (!pp) return 0;
