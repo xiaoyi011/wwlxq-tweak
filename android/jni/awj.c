@@ -835,7 +835,6 @@ JNIEXPORT void JNICALL
 Java_com_awj_Native_clear(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
     ensure_thread();
-    if (!in_battle()) return;
     static int cnt = 0;
     cnt++;
     void* v = view();
