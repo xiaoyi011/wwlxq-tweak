@@ -39,6 +39,8 @@ static const char* (*x_field_get_name)(void*);
 static size_t (*x_image_get_class_count)(void*);
 static void* (*x_image_get_class)(void*, size_t);
 static const char* (*x_class_get_name)(void*);
+static void* (*x_field_get_type)(void*);
+static const char* (*x_type_get_name)(void*);
 
 static void* g_lib;
 
@@ -74,6 +76,8 @@ static int resolve_api(void) {
     RESOLVE(x_image_get_class_count, "il2cpp_image_get_class_count");
     RESOLVE(x_image_get_class, "il2cpp_image_get_class");
     RESOLVE(x_class_get_name, "il2cpp_class_get_name");
+    RESOLVE(x_field_get_type, "il2cpp_field_get_type");
+    RESOLVE(x_type_get_name, "il2cpp_type_get_name");
     return x_domain_get && x_runtime_invoke && x_class_from_name;
 }
 
@@ -243,6 +247,44 @@ static int resolve_game(void) {
             }
         }
         LOGI("attrscan found=%d total=%d", found, (int)cc);
+    }
+    if (x_field_get_type && x_type_get_name && x_method_get_name &&
+        x_image_get_class_count && x_image_get_class && x_class_get_name) {
+        size_t cc2 = x_image_get_class_count(g_image);
+        int slotrefs = 0, attrm = 0;
+        for (size_t i = 0; i < cc2 && (slotrefs < 40 || attrm < 60); i++) {
+            void* c = x_image_get_class(g_image, i);
+            if (!c) continue;
+            const char* cn3 = x_class_get_name(c);
+            if (!cn3) continue;
+            if (x_class_get_fields && x_field_get_name && slotrefs < 40) {
+                void* it = NULL;
+                void* f;
+                while ((f = x_class_get_fields(c, &it)) != NULL) {
+                    void* t = x_field_get_type(f);
+                    const char* tn = t ? x_type_get_name(t) : NULL;
+                    if (tn && strstr(tn, "AttrSlot")) {
+                        const char* fn = x_field_get_name(f);
+                        LOGI("SLOTREF %s.%s", cn3, fn ? fn : "?");
+                        slotrefs++;
+                        if (slotrefs >= 40) break;
+                    }
+                }
+            }
+            if ((strstr(cn3, "Battle") || strstr(cn3, "Hero")) && attrm < 60) {
+                void* it = NULL;
+                void* m;
+                while ((m = x_class_get_methods(c, &it)) != NULL) {
+                    const char* mn = x_method_get_name(m);
+                    if (mn && strstr(mn, "Attr")) {
+                        LOGI("ATTRM %s.%s", cn3, mn);
+                        attrm++;
+                        if (attrm >= 60) break;
+                    }
+                }
+            }
+        }
+        LOGI("slotref scan refs=%d methods=%d", slotrefs, attrm);
     }
     LOGI("resolved: kill=%d cheat=%d win=%d lua=%d speed=%d",
          g_m_kill_monster != NULL, g_m_cheat != NULL, g_m_kill_robot != NULL,
