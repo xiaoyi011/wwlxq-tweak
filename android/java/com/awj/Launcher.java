@@ -375,9 +375,11 @@ public final class Launcher {
                 if (!Settings.canDrawOverlays(app)) { logger("no overlay for panel"); return; }
                 View content = buildPanel2(act);
                 android.widget.ScrollView panelSc = new android.widget.ScrollView(act);
+                panelSc.setFillViewport(false);
+                panelSc.setVerticalScrollBarEnabled(true);
                 panelSc.addView(content, new android.widget.ScrollView.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                final int maxH = (int) (app.getResources().getDisplayMetrics().heightPixels * 0.45f);
+                final int maxH = (int) (app.getResources().getDisplayMetrics().heightPixels * 0.55f);
                 FrameLayout panelRoot = new FrameLayout(act);
                 panelRootView = panelRoot;
                 panelRoot.addView(panelSc, new FrameLayout.LayoutParams(
