@@ -491,10 +491,7 @@ static void* auto_thread(void* arg) {
         if (tick % 4 == 0) {                         // 每 2 秒
             if (g_t_inv) run_on_main(^{ gm_call2(1, 1); });   // 无敌
             if (g_spd_saved > 1.01f)
-                run_on_main(^{
-                    do_set_timescale(g_spd_saved);
-                    do_set_speed(g_spd_saved);
-                }); // 记忆的全局加速 + 战斗加速自动生效
+                run_on_main(^{ do_set_speed(g_spd_saved); }); // 记忆的战斗加速自动生效
         }
         usleep(500000);
     }
@@ -1164,7 +1161,7 @@ static void awj_toggle_panel(void) {
 
     // 全局加速滑条（Unity Time.timeScale，1-20x）
     UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, extraY + 8, 120, 24)];
-    spdLabel.text = @"全局加速: 1x";
+    spdLabel.text = @"加速: 1x";
     spdLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
     spdLabel.font = [UIFont boldSystemFontOfSize:13];
     [sv addSubview:spdLabel];
@@ -1175,7 +1172,7 @@ static void awj_toggle_panel(void) {
     float savedSpd = [[NSUserDefaults standardUserDefaults] floatForKey:@"awj_tspeed"];
     if (savedSpd < 1.0f || savedSpd > 20.0f) savedSpd = 1.0f;
     spdSlider.value = roundf(savedSpd);
-    spdLabel.text = [NSString stringWithFormat:@"全局加速: %.0fx", spdSlider.value];
+    spdLabel.text = [NSString stringWithFormat:@"加速: %.0fx", spdSlider.value];
     spdSlider.minimumTrackTintColor = [UIColor colorWithRed:0.15 green:0.6 blue:0.5 alpha:1];
     [spdSlider setThumbImage:awj_thumb() forState:UIControlStateNormal];
     [spdSlider setThumbImage:awj_thumb() forState:UIControlStateHighlighted];
@@ -1184,13 +1181,10 @@ static void awj_toggle_panel(void) {
         if (v < 1) v = 1;
         if (v > 20) v = 20;
         spdSlider.value = v;
-        spdLabel.text = [NSString stringWithFormat:@"全局加速: %.0fx", v];
+        spdLabel.text = [NSString stringWithFormat:@"加速: %.0fx", v];
         [[NSUserDefaults standardUserDefaults] setFloat:v forKey:@"awj_tspeed"];
         g_spd_saved = v;
-        run_on_main(^{
-            do_set_timescale(v);
-            do_set_speed(v);   // 双保险：战斗内也加速（1-20x）
-        });
+        run_on_main(^{ do_set_speed(v); });   // 战斗加速（1-20x）
     }] forControlEvents:UIControlEventValueChanged];
     [sv addSubview:spdSlider];
 
