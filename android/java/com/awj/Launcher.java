@@ -439,12 +439,14 @@ public final class Launcher {
         final TextView bSp = mkBtn("无限银币", C_BTN);
         final TextView bInv = mkBtn("无敌", C_BTN);
         final TextView bStop = mkBtn("停止移动", C_BTN);
+        final TextView bCheat = mkBtn("作弊开关", C_BTN);
+        final TextView bBrute = mkBtn("暴力测试", C_BTN);
         final TextView bClear = mkBtn("清场", C_BTN);
         final TextView bHint = mkBtn("点悬浮球开关面板", 0xFF1C283C);
         bHint.setTextSize(9);
         bHint.setTextColor(C_DIM);
 
-        View[] rows = new View[]{bAuto, bWin, bSp, bInv, bStop, bHint};
+        View[] rows = new View[]{bAuto, bWin, bSp, bInv, bStop, bCheat, bBrute, bHint};
         for (int i = 0; i < rows.length; i += 2) {
             LinearLayout row = new LinearLayout(app);
             row.setOrientation(LinearLayout.HORIZONTAL);
@@ -572,6 +574,20 @@ public final class Launcher {
         });
         bStop.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { Native.stopMove(); }
+        });
+        bCheat.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                new Thread(new Runnable() {
+                    public void run() { Native.cheat(); }
+                }).start();
+            }
+        });
+        bBrute.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                new Thread(new Runnable() {
+                    public void run() { Native.brute(); }
+                }).start();
+            }
         });
         bClear.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { Native.clear(); }
