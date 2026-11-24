@@ -41,6 +41,7 @@ static void* (*x_image_get_class)(void*, size_t);
 static const char* (*x_class_get_name)(void*);
 static void* (*x_field_get_type)(void*);
 static void* (*x_method_get_pointer)(void*);
+static size_t (*x_field_get_offset)(void*);
 static uint32_t (*x_field_get_flags)(void*);
 static const char* (*x_type_get_name)(void*);
 static uint32_t (*x_method_get_param_count)(void*);
@@ -83,6 +84,7 @@ static int resolve_api(void) {
     RESOLVE(x_class_get_name, "il2cpp_class_get_name");
     RESOLVE(x_field_get_type, "il2cpp_field_get_type");
     RESOLVE(x_method_get_pointer, "il2cpp_method_get_pointer");
+    RESOLVE(x_field_get_offset, "il2cpp_field_get_offset");
     RESOLVE(x_field_get_flags, "il2cpp_field_get_flags");
     RESOLVE(x_type_get_name, "il2cpp_type_get_name");
     RESOLVE(x_method_get_param_count, "il2cpp_method_get_param_count");
@@ -803,6 +805,52 @@ static int unity_ready(void) {
     return ok;
 }
 
+static void probe_param_types(const char* cn) {
+    void* c = class_of(g_image, cn);
+    if (!c) { LOGI("P4 %s: null", cn); return; }
+    void* it = NULL; void* m; int n = 0;
+    while ((m = x_class_get_methods(c, &it)) != NULL && n < 40) {
+        const char* nm = x_method_get_name(m);
+        uint32_t pc = x_method_get_param_count ? x_method_get_param_count(m) : 0;
+        int interesting = nm && (strstr(nm,"Settle")||strstr(nm,"Over")||strstr(nm,"Result")||strstr(nm,"Execute")||strstr(nm,"Update"));
+        if (interesting) {
+            LOGI("P4M %s::%s pc=%u ptr=%p", cn, nm, pc, x_method_get_pointer ? x_method_get_pointer(m) : NULL);
+            for (uint32_t pi = 0; pi < pc && pi < 5; pi++) {
+                void* pt = x_method_get_param ? x_method_get_param(m, pi) : NULL;
+                const char* pn = x_method_get_param_name ? x_method_get_param_name(m, pi) : NULL;
+                const char* tn = pt && x_type_get_name ? x_type_get_name(pt) : "?";
+                LOGI("P4P %s::%s param%d %s : %s", cn, nm, pi, pn ? pn : "?", tn ? tn : "?");
+            }
+            n++;
+        }
+    }
+    LOGI("P4 %s done=%d", cn, n);
+}
+
+static void probe_result_obj(void) {
+    void* c = class_of(g_image, "BattleResult");
+    if (!c) { LOGI("P4 BattleResult: null"); return; }
+    const char* ns = x_class_get_namespace ? x_class_get_namespace(c) : NULL;
+    LOGI("P4 BattleResult ns=%s name=%s", ns ? ns : "?", x_class_get_name(c));
+    if (x_class_get_fields && x_field_get_name) {
+        void* it = NULL; void* f; int n = 0;
+        while ((f = x_class_get_fields(c, &it)) != NULL && n < 80) {
+            const char* fn = x_field_get_name(f);
+            void* ft = x_field_get_type ? x_field_get_type(f) : NULL;
+            const char* tn = ft && x_type_get_name ? x_type_get_name(ft) : "?";
+            size_t off = x_field_get_offset ? x_field_get_offset(f) : 0;
+            LOGI("P4R %s : %s off=%zu", fn ? fn : "?", tn ? tn : "?", off);
+            n++;
+        }
+    }
+    void* it2 = NULL; void* m2; int k = 0;
+    while ((m2 = x_class_get_methods && x_class_get_methods(c, &it2)) != NULL && k < 40) {
+        const char* nm = x_method_get_name(m2);
+        uint32_t pc = x_method_get_param_count ? x_method_get_param_count(m2) : 0;
+        LOGI("P4RM %s pc=%u ptr=%p", nm ? nm : "?", pc, x_method_get_pointer ? x_method_get_pointer(m2) : NULL);
+        k++;
+    }
+}
 static void probe_dump_class(const char* cn) {
     void* c = class_of(g_image, cn);
     if (!c) { LOGI("P3 %s: null", cn); return; }
@@ -908,11 +956,9 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
     if (r) {
         probe_update_ptrs();
         probe_settle_api();
-        probe_dump_class("BattleResultCtrl");
-        probe_dump_class("BattlePvpProxy");
-        probe_dump_class("BattleResult");
-        probe_dump_class("SettleBattleEvent");
-        probe_dump_class("ScBattleLevelResult");
+        probe_result_obj();
+        probe_param_types("SettleBattleEvent");
+        probe_param_types("BattlePvpProxy");
         probe_scan_classes();
     }
     return r;
