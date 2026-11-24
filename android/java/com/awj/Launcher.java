@@ -190,10 +190,10 @@ public final class Launcher {
             b.setText("逸");
             b.setTextColor(C_TEXT);
             b.setGravity(Gravity.CENTER);
-            b.setTextSize(15);
+            b.setTextSize(12);
             b.setBackground(bg(0xE61A8CFF, 22));
             ovLp = new WindowManager.LayoutParams(
-                    dp(48), dp(48),
+                    dp(36), dp(36),
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                             | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
@@ -372,17 +372,27 @@ public final class Launcher {
                 if (act == null || act.isFinishing()) act = a;
                 if (act == null || act.isFinishing()) return;
                 if (!Settings.canDrawOverlays(app)) { logger("no overlay for panel"); return; }
-                final View v = buildPanel2(act);
+                View content = buildPanel2(act);
+                android.widget.ScrollView panelSc = new android.widget.ScrollView(act);
+                panelSc.addView(content, new android.widget.ScrollView.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                final int maxH = (int) (app.getResources().getDisplayMetrics().heightPixels * 0.45f);
+                FrameLayout panelRoot = new FrameLayout(act);
+                panelRoot.addView(panelSc, new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, maxH));
+                final View v = panelRoot;
                 wm = (WindowManager) app.getSystemService(Context.WINDOW_SERVICE);
                 panelLp = new WindowManager.LayoutParams(
-                        dp(320), WindowManager.LayoutParams.WRAP_CONTENT,
+                        dp(280), maxH,
                         WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                                 | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                         android.graphics.PixelFormat.TRANSLUCENT);
-                panelLp.gravity = Gravity.CENTER;
-                panelLp.x = 0;
-                panelLp.y = 0;
+                panelLp.gravity = Gravity.TOP | Gravity.LEFT;
+                final int sw = app.getResources().getDisplayMetrics().widthPixels;
+                final int sh = app.getResources().getDisplayMetrics().heightPixels;
+                panelLp.x = (sw - dp(280)) / 2;
+                panelLp.y = (int) (sh * 0.52f);
                 try {
                     wm.addView(v, panelLp);
                     panelView = v;
@@ -447,7 +457,7 @@ public final class Launcher {
     static void showHeroPicker(final TextView btn) {
         final Activity act = topActivity() != null ? topActivity() : curActivity;
         if (act == null || act.isFinishing()) return;
-        String defs = "雷神 4|强袭 4|洛基 4|妲己 4|死亡骑士 4";
+        String defs = "强袭 4|洛基 4|妲己 4|死亡骑士 4";
         String saved = sp.getString("hero_list", "");
         java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<String>();
         for (String s : defs.split("\\|")) if (s.trim().length() > 0) set.add(s.trim());
@@ -562,10 +572,10 @@ public final class Launcher {
         TextView t = new TextView(app);
         t.setText(text);
         t.setTextColor(C_TEXT);
-        t.setTextSize(13);
+        t.setTextSize(11);
         t.setGravity(Gravity.CENTER);
-        t.setBackground(bg(color, 8));
-        t.setPadding(dp(6), dp(12), dp(6), dp(12));
+        t.setBackground(bg(color, 6));
+        t.setPadding(dp(4), dp(8), dp(4), dp(8));
         return t;
     }
 
@@ -580,24 +590,24 @@ public final class Launcher {
         TextView title = new TextView(app);
         title.setText("小逸");
         title.setTextColor(C_TEXT);
-        title.setTextSize(15);
+        title.setTextSize(13);
         title.setGravity(Gravity.CENTER);
         titleRow.addView(title, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(20)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(18)));
         TextView close = new TextView(app);
         close.setText("×");
         close.setTextColor(C_TEXT);
-        close.setTextSize(18);
+        close.setTextSize(16);
         close.setGravity(Gravity.CENTER);
         close.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { closePanel(); }
         });
-        FrameLayout.LayoutParams clp = new FrameLayout.LayoutParams(dp(32), dp(20));
+        FrameLayout.LayoutParams clp = new FrameLayout.LayoutParams(dp(28), dp(18));
         clp.gravity = Gravity.END;
         titleRow.addView(close, clp);
         attachDrag(titleRow);
         p.addView(titleRow, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(20)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(18)));
 
         final TextView bClear = mkBtn("自动清场", C_BTN);
         final TextView bWin = mkBtn("PVP直接胜利", C_BTN);
