@@ -449,16 +449,14 @@ public final class Launcher {
         p.addView(titleRow);
 
         final TextView bClear = mkBtn("自动清场", C_BTN);
-        final TextView bAutoWin = mkBtn("直接判胜：自动", C_BTN);
-        final TextView bStop = mkBtn("停止怪物移动", C_BTN);
-        final TextView bSpAdd = mkBtn("加 SP", C_BTN);
-        final TextView bSpSet = mkBtn("设置 SP 数值", C_BTN);
-        final TextView bWall = mkBtn("城墙999999999", C_BTN);
+        final TextView bWin = mkBtn("PVP直接胜利", C_BTN);
+        final TextView bSp = mkBtn("无限银币", C_BTN);
+        final TextView bInv = mkBtn("无敌", C_BTN);
         final TextView bHint = mkBtn("点悬浮球开关面板", 0xFF1C283C);
         bHint.setTextSize(9);
         bHint.setTextColor(C_DIM);
 
-        View[] rows = new View[]{bClear, bAutoWin, bStop, bSpAdd, bSpSet, bWall, bHint};
+        View[] rows = new View[]{bClear, bWin, bSp, bInv, bHint};
         for (int i = 0; i < rows.length; i += 2) {
             LinearLayout row = new LinearLayout(app);
             row.setOrientation(LinearLayout.HORIZONTAL);
@@ -533,37 +531,24 @@ public final class Launcher {
                 if (autoClear) Native.clear();
             }
         });
-        bStop.setOnClickListener(new View.OnClickListener() {
+        bWin.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Toast.makeText(app, "停止移动 已执行", Toast.LENGTH_SHORT).show();
-                Native.stopMove();
+                Toast.makeText(app, "PVP直接胜利 已执行", Toast.LENGTH_SHORT).show();
+                Native.win();
             }
         });
-        bSpAdd.setOnClickListener(new View.OnClickListener() {
+        bSp.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Toast.makeText(app, "加 SP 已执行", Toast.LENGTH_SHORT).show();
+                Toast.makeText(app, "无限银币 已执行", Toast.LENGTH_SHORT).show();
                 Native.sp();
             }
         });
-        bSpSet.setOnClickListener(new View.OnClickListener() {
+        bInv.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Toast.makeText(app, "设置 SP 已执行", Toast.LENGTH_SHORT).show();
-                Native.setSp(999999);
+                Toast.makeText(app, "无敌 已执行", Toast.LENGTH_SHORT).show();
+                Native.inv();
             }
         });
-        bWall.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                Toast.makeText(app, "城墙血量 已执行", Toast.LENGTH_SHORT).show();
-                Native.wallHp(999999999L);
-            }
-        });
-        bAutoWin.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                autoWin = !autoWin;
-                bAutoWin.setBackground(bg(autoWin ? C_ON : C_BTN, 8));
-            }
-        });
-
         if (gsp > 1) {
             final int applySp = gsp;
             Native.speed(applySp);
