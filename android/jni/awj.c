@@ -803,6 +803,27 @@ static int unity_ready(void) {
     return ok;
 }
 
+static void probe_settle_api(void) {
+    if (!x_class_get_methods || !x_method_get_name) { LOGI("P2 no api"); return; }
+    const char* names[] = {"BattleResultProxy","BattleResultCtrl","BattleResultView","BattleLevelProxy",
+                           "BattleProxy","BattleOverResultParam","BattleResultDataParam","BattleDefine",
+                           "BattleMainPanel","BattleResultData","BattleResultWindow"};
+    for (int i = 0; i < 11; i++) {
+        void* c = class_of(g_image, names[i]);
+        if (!c) { LOGI("P2 %s: null", names[i]); continue; }
+        int n = 0;
+        void* it = NULL; void* m;
+        while ((m = x_class_get_methods(c, &it)) != NULL && n < 120) {
+            const char* nm = x_method_get_name(m);
+            if (nm && (strstr(nm,"Result")||strstr(nm,"Settle")||strstr(nm,"Win")||strstr(nm,"Star")||strstr(nm,"Reward")||strstr(nm,"Finish")||strstr(nm,"Close")||strstr(nm,"Create")||strstr(nm,"Check"))) {
+                uint32_t pc = x_method_get_param_count ? x_method_get_param_count(m) : 0;
+                LOGI("P2 %s::%s pc=%u m=%p", names[i], nm, pc, m);
+                n++;
+            }
+        }
+        LOGI("P2 %s end n=%d", names[i], n);
+    }
+}
 static void probe_update_ptrs(void) {
     if (!x_method_get_pointer || !x_class_get_methods) { LOGI("probe: no pointer api"); return; }
     const char* cls_names[] = {"BattleLockStepCtrl", "BattleProxy", "BattleMainPanel", "BattleReduceHpCtrl", "BattleLogicCtrl"};
@@ -844,7 +865,7 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
     if (x_thread_attach) { x_thread_attach(dom); LOGI("thread attached"); }
     int r = resolve_game() ? 1 : 0;
     LOGI("game resolve r=%d", r);
-    if (r) probe_update_ptrs();
+    if (r) { probe_update_ptrs(); probe_settle_api(); }
     return r;
 }
 
