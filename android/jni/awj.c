@@ -128,6 +128,7 @@ static void* g_lua_input_field;
 static void* g_bpvp_field;
 static void* g_m_set_result;
 static void* g_m_disable_skill;
+static void* g_m_unlock_grid;
 static void* g_m_check_result;
 static void* g_bproxy_field;
 static void* g_m_is_pvp;
@@ -196,6 +197,7 @@ static int resolve_game(void) {
             g_debug_view_field = x_class_get_field_from_name(mp, "battleDebugView");
             g_m_open_debug = x_class_get_method_from_name(bdv, "OnOpenClick", 0);
     if (dv) g_m_disable_skill = x_class_get_method_from_name(dv, "OnDisableRoleSkillClicked", 0);
+    if (dv) g_m_unlock_grid = x_class_get_method_from_name(dv, "OnUnlockAllGridClick", 0);
         }
         LOGI("native gm entry: field=%p open=%p", g_debug_view_field, g_m_open_debug);
         void* bpc = class_of(g_image, "BattleProxy");
@@ -1281,6 +1283,16 @@ Java_com_awj_Native_autoPush(JNIEnv* env, jclass cls) {
     x_runtime_invoke(m, v, NULL, &exc);
     LOGI("autoPush view=%p exc=%p", v, exc);
 }
+
+JNIEXPORT void JNICALL
+Java_com_awj_Native_unlockGrid(JNIEnv* env, jclass cls) {
+    (void)env; (void)cls;
+    ensure_thread();
+    if (!g_m_unlock_grid) { LOGE("unlockGrid: no method"); return; }
+    invoke0(g_m_unlock_grid, view());
+    LOGI("unlockGrid done");
+}
+
 JNIEXPORT jint JNICALL
 Java_com_awj_Native_ready(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
