@@ -882,6 +882,31 @@ static void probe_names(void* c, const char* tag) {
     LOGI("P6 %s methods=%d", tag, n);
 }
 
+static void probe_entry_scan(void) {
+    if (!x_image_get_class_count || !x_image_get_class || !x_class_get_name || !x_class_get_methods) { LOGI("P7 no api"); return; }
+    size_t cnt = x_image_get_class_count(g_image);
+    const char* want[] = {"StartBattleNet","PrepareNormalEnterBattle","EnterBattleInner","enterBattle","OnEnterBattle","OnEnterBattleCompleted","AfterEnterBattle","BuildEnterBattleData"};
+    int hits = 0;
+    for (size_t i = 0; i < cnt && hits < 40; i++) {
+        void* c = x_image_get_class(g_image, i);
+        if (!c) continue;
+        void* it = NULL; void* m;
+        while ((m = x_class_get_methods(c, &it)) != NULL) {
+            const char* nm = x_method_get_name(m);
+            if (!nm) continue;
+            for (int w = 0; w < 8; w++) {
+                if (strcmp(nm, want[w]) == 0) {
+                    const char* cn = x_class_get_name(c);
+                    uint32_t pc = x_method_get_param_count ? x_method_get_param_count(m) : 0;
+                    LOGI("P7 %s::%s pc=%u", cn ? cn : "?", nm, pc);
+                    hits++;
+                    break;
+                }
+            }
+        }
+    }
+    LOGI("P7 hits=%d", hits);
+}
 static void probe_level_flow(void) {
     probe_names(class_of(g_image, "BattleLevelProxy"), "BattleLevelProxy");
     probe_names(class_of(g_image, "BattleProxy"), "BattleProxy");
@@ -1050,6 +1075,7 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
         probe_settle_api();
         probe_result_type();
         probe_level_flow();
+        probe_entry_scan();
         probe_param_types("SettleBattleEvent");
         probe_param_types("BattlePvpProxy");
         probe_scan_classes();
