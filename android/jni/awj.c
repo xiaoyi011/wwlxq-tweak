@@ -41,6 +41,8 @@ static void* (*x_image_get_class)(void*, size_t);
 static const char* (*x_class_get_name)(void*);
 static void* (*x_field_get_type)(void*);
 static const char* (*x_type_get_name)(void*);
+static uint32_t (*x_method_get_param_count)(void*);
+static void* (*x_method_get_param)(void*, uint32_t);
 
 static void* g_lib;
 
@@ -78,6 +80,8 @@ static int resolve_api(void) {
     RESOLVE(x_class_get_name, "il2cpp_class_get_name");
     RESOLVE(x_field_get_type, "il2cpp_field_get_type");
     RESOLVE(x_type_get_name, "il2cpp_type_get_name");
+    RESOLVE(x_method_get_param_count, "il2cpp_method_get_param_count");
+    RESOLVE(x_method_get_param, "il2cpp_method_get_param");
     return x_domain_get && x_runtime_invoke && x_class_from_name;
 }
 
@@ -251,40 +255,60 @@ static int resolve_game(void) {
     if (x_field_get_type && x_type_get_name && x_method_get_name &&
         x_image_get_class_count && x_image_get_class && x_class_get_name) {
         size_t cc2 = x_image_get_class_count(g_image);
-        int slotrefs = 0, attrm = 0;
-        for (size_t i = 0; i < cc2 && (slotrefs < 40 || attrm < 60); i++) {
+        int refs = 0;
+        for (size_t i = 0; i < cc2 && refs < 30; i++) {
             void* c = x_image_get_class(g_image, i);
             if (!c) continue;
             const char* cn3 = x_class_get_name(c);
-            if (!cn3) continue;
-            if (x_class_get_fields && x_field_get_name && slotrefs < 40) {
-                void* it = NULL;
-                void* f;
-                while ((f = x_class_get_fields(c, &it)) != NULL) {
-                    void* t = x_field_get_type(f);
-                    const char* tn = t ? x_type_get_name(t) : NULL;
-                    if (tn && strstr(tn, "AttrSlot")) {
-                        const char* fn = x_field_get_name(f);
-                        LOGI("SLOTREF %s.%s", cn3, fn ? fn : "?");
-                        slotrefs++;
-                        if (slotrefs >= 40) break;
-                    }
-                }
-            }
-            if ((strstr(cn3, "Battle") || strstr(cn3, "Hero")) && attrm < 60) {
-                void* it = NULL;
-                void* m;
-                while ((m = x_class_get_methods(c, &it)) != NULL) {
-                    const char* mn = x_method_get_name(m);
-                    if (mn && strstr(mn, "Attr")) {
-                        LOGI("ATTRM %s.%s", cn3, mn);
-                        attrm++;
-                        if (attrm >= 60) break;
-                    }
+            if (!cn3 || strcmp(cn3, "AttrSlot") == 0) continue;
+            if (!x_class_get_fields || !x_field_get_name) continue;
+            void* it = NULL;
+            void* f;
+            while ((f = x_class_get_fields(c, &it)) != NULL) {
+                void* t = x_field_get_type(f);
+                const char* tn = t ? x_type_get_name(t) : NULL;
+                if (tn && strstr(tn, "AttrSlot")) {
+                    const char* fn = x_field_get_name(f);
+                    LOGI("SLOTREF %s.%s", cn3, fn ? fn : "?");
+                    refs++;
+                    if (refs >= 30) break;
                 }
             }
         }
-        LOGI("slotref scan refs=%d methods=%d", slotrefs, attrm);
+        LOGI("slotref holders=%d", refs);
+        static const char* mnames[] = {"ChangeAttr", "OnSetEntityBaseAttr", "ChangeHeroAttribute",
+                                       "SetHeroEchoAttribute", "GetRoleAttr", "ChangeRoleAttr",
+                                       "ChangeSpecAttr", "SetSpecAttr", "AddSpecialAttr"};
+        int mhits = 0;
+        for (size_t i = 0; i < cc2 && mhits < 30; i++) {
+            void* c = x_image_get_class(g_image, i);
+            if (!c) continue;
+            const char* cn4 = x_class_get_name(c);
+            if (!cn4) continue;
+            if (!x_class_get_methods || !x_method_get_name) continue;
+            void* it = NULL;
+            void* m;
+            while ((m = x_class_get_methods(c, &it)) != NULL) {
+                const char* mn = x_method_get_name(m);
+                if (!mn) continue;
+                int hit = 0;
+                for (int k = 0; k < 9; k++) if (strcmp(mn, mnames[k]) == 0) { hit = 1; break; }
+                if (!hit) continue;
+                uint32_t pc = x_method_get_param_count ? x_method_get_param_count(m) : 0;
+                char sig[192];
+                sig[0] = 0;
+                for (uint32_t p = 0; p < pc && p < 6; p++) {
+                    void* pt = x_method_get_param ? x_method_get_param(m, p) : NULL;
+                    const char* ptn = pt ? x_type_get_name(pt) : NULL;
+                    strncat(sig, ptn ? ptn : "?", sizeof(sig) - strlen(sig) - 1);
+                    if (p + 1 < pc) strncat(sig, ",", sizeof(sig) - strlen(sig) - 1);
+                }
+                LOGI("MSIG %s.%s(%s)", cn4, mn, sig);
+                mhits++;
+                if (mhits >= 30) break;
+            }
+        }
+        LOGI("msig hits=%d", mhits);
     }
     LOGI("resolved: kill=%d cheat=%d win=%d lua=%d speed=%d",
          g_m_kill_monster != NULL, g_m_cheat != NULL, g_m_kill_robot != NULL,
