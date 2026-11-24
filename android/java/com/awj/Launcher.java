@@ -474,25 +474,49 @@ public final class Launcher {
         // 说明：上面 6 个格子已包含“清场”位（bClear 未使用），把 bClear 换成停止移动下方的独立行
         // 简化：不使用 bClear，保持 6 格布局
 
-        // 加速滑条
-        p.addView(makeLabel("加速: " + ((int) savedSpeed) + "x"));
+        // 全局加速滑条 1-15x
+        final int gsp = Math.max(1, Math.min(15, (int) savedSpeed));
+        p.addView(makeLabel("全局加速: " + gsp + "x"));
         SeekBar speedBar = new SeekBar(app);
-        speedBar.setMax(9);
-        speedBar.setProgress(Math.max(0, Math.min(9, ((int) savedSpeed) - 1)));
+        speedBar.setMax(14);
+        speedBar.setProgress(gsp - 1);
         final TextView speedLabel = (TextView) p.getChildAt(p.getChildCount() - 1);
         speedBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar sb, int prog, boolean fromUser) {
-                speedLabel.setText("加速: " + (prog + 1) + "x");
+                speedLabel.setText("全局加速: " + (prog + 1) + "x");
             }
             public void onStartTrackingTouch(SeekBar sb) {}
             public void onStopTrackingTouch(SeekBar sb) {
-                float v = sb.getProgress() + 1;
+                final float v = sb.getProgress() + 1;
                 savedSpeed = v;
                 sp.edit().putFloat("speed", v).apply();
-                Native.speed(v);
+                new Thread(new Runnable() {
+                    public void run() { Native.timeScale(v); }
+                }).start();
             }
         });
         p.addView(speedBar);
+
+        // 快进滑条 0-30 秒
+        p.addView(makeLabel("快进: 0 秒"));
+        final TextView ffLabel = (TextView) p.getChildAt(p.getChildCount() - 1);
+        SeekBar ffBar = new SeekBar(app);
+        ffBar.setMax(30);
+        ffBar.setProgress(0);
+        ffBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            public void onProgressChanged(SeekBar sb, int prog, boolean fromUser) {
+                ffLabel.setText("快进: " + prog + " 秒");
+            }
+            public void onStartTrackingTouch(SeekBar sb) {}
+            public void onStopTrackingTouch(SeekBar sb) {
+                final int sec = sb.getProgress();
+                if (sec <= 0) return;
+                new Thread(new Runnable() {
+                    public void run() { Native.fastForward(sec); }
+                }).start();
+            }
+        });
+        p.addView(ffBar);
 
         // 怪物血量滑条
         p.addView(makeLabel("怪物血量: 100%"));
@@ -592,8 +616,13 @@ public final class Launcher {
         bClear.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { Native.clear(); }
         });
-        // 应用记忆的加速
-        if (savedSpeed > 1f) Native.speed(savedSpeed);
+        // 面板打开时重新应用一次全局加速
+        if (gsp > 1) {
+            final int applySp = gsp;
+            new Thread(new Runnable() {
+                public void run() { Native.timeScale(applySp); }
+            }).start();
+        }
 
         return p;
     }
