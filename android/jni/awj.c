@@ -19,6 +19,9 @@
 static void* (*x_domain_get)(void);
 static void** (*x_domain_get_assemblies)(void*, size_t*);
 static void* (*x_assembly_get_image)(void*);
+static int32_t (*x_array_length)(void*);
+static void* g_ui_image;
+static void* x_class_from_name_ui;
 static const char* (*x_image_get_name)(void*);
 static void* (*x_class_from_name)(void*, const char*, const char*);
 static void* (*x_class_get_method_from_name)(void*, const char*, int);
@@ -66,6 +69,7 @@ static int resolve_api(void) {
     RESOLVE(x_domain_get, "il2cpp_domain_get");
     RESOLVE(x_domain_get_assemblies, "il2cpp_domain_get_assemblies");
     RESOLVE(x_assembly_get_image, "il2cpp_assembly_get_image");
+    RESOLVE(x_array_length, "il2cpp_array_length");
     RESOLVE(x_image_get_name, "il2cpp_image_get_name");
     RESOLVE(x_class_from_name, "il2cpp_class_from_name");
     RESOLVE(x_class_get_method_from_name, "il2cpp_class_get_method_from_name");
@@ -1136,6 +1140,7 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
         probe_entry_scan();
         probe_static_refs();
         probe_attr_api();
+        probe_buttons();
         probe_names(class_of(g_image, "BattleDebugActionView"), "BattleDebugActionView");
         probe_names(class_of(g_image, "BattleDebugView"), "BattleDebugView");
         probe_names(class_of(g_image, "BattleEntityProxy"), "BattleEntityProxy");
@@ -1225,6 +1230,45 @@ Java_com_awj_Native_skillCd(JNIEnv* env, jclass cls) {
     if (!g_m_disable_skill) { LOGE("skillCd: no method"); return; }
     invoke0(g_m_disable_skill, view());
     LOGI("skillCd done");
+}
+static void* unity_class(const char* asm_name, const char* ns, const char* name) {
+    if (!g_domain || !x_domain_assembly_open || !x_assembly_get_image || !x_class_from_name) return NULL;
+    void* a = x_domain_assembly_open(g_domain, asm_name);
+    if (!a) { LOGE("asm %s null", asm_name); return NULL; }
+    void* img = x_assembly_get_image(a);
+    if (!img) { LOGE("img %s null", asm_name); return NULL; }
+    void* c = x_class_from_name(img, ns, name);
+    LOGI("unity cls %s.%s = %p", ns, name, c);
+    return c;
+}
+
+static void probe_buttons(void) {
+    void* ui_img_check = NULL; (void)ui_img_check;
+    void* btn_cls = unity_class("UnityEngine.UI", "UnityEngine.UI", "Button");
+    void* obj_cls = unity_class("UnityEngine.CoreModule", "UnityEngine", "Object");
+    if (!btn_cls || !obj_cls) { LOGE("probe_buttons: cls null"); return; }
+    void* fof = x_class_get_method_from_name(obj_cls, "FindObjectsOfType", 1);
+    void* name_m = x_class_get_method_from_name(obj_cls, "get_name", 0);
+    if (!fof || !name_m) { LOGE("probe_buttons: methods null"); return; }
+    void* tobj = x_type_get_object(x_class_get_type(btn_cls));
+    void* args[1]; args[0] = tobj;
+    void* exc = NULL;
+    void* arr = x_runtime_invoke(fof, NULL, args, &exc);
+    LOGI("buttons arr=%p exc=%p", arr, exc);
+    if (!arr || !x_array_length) return;
+    int32_t n = x_array_length(arr);
+    LOGI("buttons count=%d", n);
+    for (int32_t i = 0; i < n && i < 80; i++) {
+        void* item = *(void**)((char*)arr + 0x20 + i * sizeof(void*));
+        if (!item) continue;
+        void* nm = x_runtime_invoke(name_m, item, NULL, NULL);
+        const char* s = "?";
+        if (nm) {
+            void* chars = *(void**)((char*)nm + 0x10);
+            if (chars) s = (const char*)chars;
+        }
+        LOGI("BTN[%d] %s", i, s);
+    }
 }
 static void* find_object_of_type(const char* cls_name) {
     if (!x_class_get_type || !x_type_get_object || !x_runtime_invoke) return NULL;
