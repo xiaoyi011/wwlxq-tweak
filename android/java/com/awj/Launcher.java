@@ -543,6 +543,11 @@ public final class Launcher {
             public void onClick(View v) {
                 autoClear = !autoClear;
                 bAuto.setBackground(bg(autoClear ? C_ON : C_BTN, 8));
+                if (autoClear) {
+                    new Thread(new Runnable() {
+                        public void run() { Native.clear(); }
+                    }).start();
+                }
             }
         });
         bSp.setOnClickListener(new View.OnClickListener() {
@@ -627,7 +632,6 @@ public final class Launcher {
                     try { Thread.sleep(1200); } catch (Exception ignored) {}
                     if (!licensed) continue;
                     try {
-                        if (autoClear) Native.clear();
                         if (autoSp) Native.sp();
                         if (autoInv) Native.inv();
                         if (savedSpeed > 1f) Native.speed(savedSpeed);
