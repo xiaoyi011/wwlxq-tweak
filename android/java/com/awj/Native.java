@@ -17,6 +17,7 @@ public final class Native {
     public static native void checkResult();
     public static native void skillCd();
     public static native void autoPush();
+    public static native void unlockGrid();
     public static native void probeCompiled();
     public static native void sendOver();
     public static native void placeHero(String name);
