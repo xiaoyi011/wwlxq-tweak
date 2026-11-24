@@ -226,13 +226,13 @@ public final class Launcher {
                         case MotionEvent.ACTION_UP:
                             logger("ball up moved=" + moved);
                             if (!moved) {
+                                Activity act = topActivity() != null ? topActivity() : curActivity;
                                 if (System.currentTimeMillis() - downAt > 600) {
-                                    Activity act = topActivity() != null ? topActivity() : curActivity;
-                                    togglePanel(act);
-                                } else {
-                                    Activity act = topActivity() != null ? topActivity() : curActivity;
                                     if (!licensed) showLicenseDialog(act, lockMsg.length() > 0 ? lockMsg : null);
                                     else Native.openGm();
+                                } else {
+                                    if (!licensed) showLicenseDialog(act, lockMsg.length() > 0 ? lockMsg : null);
+                                    else togglePanel(act);
                                 }
                             }
                             return true;
