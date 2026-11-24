@@ -13,6 +13,8 @@ public final class Native {
     public static native void sp();
     public static native void inv();
     public static native void speed(float rate);
+    public static native void timeScale(float v);
+    public static native void fastForward(int sec);
     public static native void stopMove();
     public static native void monsterHp(int pct);
     public static native void attr(String name, long value);
