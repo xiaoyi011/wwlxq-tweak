@@ -219,7 +219,7 @@ static int resolve_game(void) {
             n++;
         }
     }
-    if (x_image_get_class_count && x_image_get_class && x_class_get_name &&
+    if (0 && x_image_get_class_count && x_image_get_class && x_class_get_name &&
         x_class_get_fields && x_field_get_name) {
         static const char* keys[] = {"crit", "Crit", "attack", "Attack", "atk", "Atk",
                                      "hp", "Hp", "def", "Def", "speed", "Speed"};
@@ -256,7 +256,7 @@ static int resolve_game(void) {
         }
         LOGI("attrscan found=%d total=%d", found, (int)cc);
     }
-    if (x_field_get_type && x_type_get_name && x_method_get_name &&
+    if (0 && x_field_get_type && x_type_get_name && x_method_get_name &&
         x_image_get_class_count && x_image_get_class && x_class_get_name) {
         size_t cc2 = x_image_get_class_count(g_image);
         int refs = 0;
@@ -359,7 +359,7 @@ static int resolve_game(void) {
         }
         LOGI("probe done");
     }
-    {
+    if (0) {
         static const char* tnames[] = {"AttrType", "BattleBaseEntity", "BattleHeroEntity",
                                        "BattleEntityProxy", "BattleProxy", "BattleReduceHpCtrl",
                                        "BattleMainPanel"};
