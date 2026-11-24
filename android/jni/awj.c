@@ -31,6 +31,7 @@ static size_t (*x_field_get_offset)(void*);
 static void* (*x_class_get_type)(void*);
 static void* (*x_type_get_object)(void*);
 static void* g_unity_image;
+static void probe_buttons(void);
 static const char* (*x_class_get_namespace)(void*);
 static const char* (*x_method_get_param_name)(void*, uint32_t);
 static void (*x_field_static_get_value)(void*, void*);
