@@ -102,7 +102,7 @@ public final class Launcher {
         new Thread(new Runnable() {
             public void run() {
                 int r = 0;
-                for (int i = 0; i < 150; i++) {
+                for (int i = 0; i < 900; i++) {
                     r = Native.init();
                     if (r == 1) break;
                     try { Thread.sleep(2000); } catch (Exception ignored) {}
