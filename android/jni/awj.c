@@ -40,6 +40,7 @@ static size_t (*x_image_get_class_count)(void*);
 static void* (*x_image_get_class)(void*, size_t);
 static const char* (*x_class_get_name)(void*);
 static void* (*x_field_get_type)(void*);
+static void* (*x_method_get_pointer)(void*);
 static uint32_t (*x_field_get_flags)(void*);
 static const char* (*x_type_get_name)(void*);
 static uint32_t (*x_method_get_param_count)(void*);
@@ -81,6 +82,7 @@ static int resolve_api(void) {
     RESOLVE(x_image_get_class, "il2cpp_image_get_class");
     RESOLVE(x_class_get_name, "il2cpp_class_get_name");
     RESOLVE(x_field_get_type, "il2cpp_field_get_type");
+    RESOLVE(x_method_get_pointer, "il2cpp_method_get_pointer");
     RESOLVE(x_field_get_flags, "il2cpp_field_get_flags");
     RESOLVE(x_type_get_name, "il2cpp_type_get_name");
     RESOLVE(x_method_get_param_count, "il2cpp_method_get_param_count");
@@ -801,6 +803,29 @@ static int unity_ready(void) {
     return ok;
 }
 
+static void probe_update_ptrs(void) {
+    if (!x_method_get_pointer || !x_class_get_methods) { LOGI("probe: no pointer api"); return; }
+    const char* cls_names[] = {"BattleLockStepCtrl", "BattleProxy", "BattleMainPanel", "BattleReduceHpCtrl", "BattleLogicCtrl"};
+    for (int ci = 0; ci < 5; ci++) {
+        void* c = class_of(g_image, cls_names[ci]);
+        if (!c) { LOGI("probe %s: null", cls_names[ci]); continue; }
+        void* it = NULL;
+        const void* ms = x_class_get_methods(c, &it);
+        int shown = 0;
+        while (ms && shown < 16) {
+            void* m = (void*)ms;
+            const char* nm = x_method_get_name ? x_method_get_name(m) : NULL;
+            if (nm && strstr(nm, "Update")) {
+                uint32_t pc = x_method_get_param_count ? x_method_get_param_count(m) : 0;
+                LOGI("probe %s.%s pc=%u ptr=%p", cls_names[ci], nm, pc, x_method_get_pointer(m));
+                shown++;
+            }
+            ms = x_class_get_methods(c, &it);
+        }
+        LOGI("probe %s shown=%d", cls_names[ci], shown);
+    }
+}
+
 JNIEXPORT jint JNICALL
 Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
@@ -819,6 +844,7 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
     if (x_thread_attach) { x_thread_attach(dom); LOGI("thread attached"); }
     int r = resolve_game() ? 1 : 0;
     LOGI("game resolve r=%d", r);
+    if (r) probe_update_ptrs();
     return r;
 }
 
