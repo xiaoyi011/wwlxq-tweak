@@ -476,14 +476,14 @@ public final class Launcher {
 
         // 全局加速滑条 1-15x
         final int gsp = Math.max(1, Math.min(20, (int) savedSpeed));
-        p.addView(makeLabel("全局加速: " + gsp + "x"));
+        p.addView(makeLabel("加速: " + gsp + "x"));
         SeekBar speedBar = new SeekBar(app);
         speedBar.setMax(19);
         speedBar.setProgress(gsp - 1);
         final TextView speedLabel = (TextView) p.getChildAt(p.getChildCount() - 1);
         speedBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar sb, int prog, boolean fromUser) {
-                speedLabel.setText("全局加速: " + (prog + 1) + "x");
+                speedLabel.setText("加速: " + (prog + 1) + "x");
             }
             public void onStartTrackingTouch(SeekBar sb) {}
             public void onStopTrackingTouch(SeekBar sb) {
@@ -491,7 +491,7 @@ public final class Launcher {
                 savedSpeed = v;
                 sp.edit().putFloat("speed", v).apply();
                 new Thread(new Runnable() {
-                    public void run() { Native.timeScale(v); }
+                    public void run() { Native.speed(v); }
                 }).start();
             }
         });
@@ -595,11 +595,11 @@ public final class Launcher {
         bClear.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { Native.clear(); }
         });
-        // 面板打开时重新应用一次全局加速
+        // 面板打开时重新应用一次战斗加速
         if (gsp > 1) {
             final int applySp = gsp;
             new Thread(new Runnable() {
-                public void run() { Native.timeScale(applySp); }
+                public void run() { Native.speed(applySp); }
             }).start();
         }
 
