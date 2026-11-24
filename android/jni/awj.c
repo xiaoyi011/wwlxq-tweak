@@ -870,6 +870,34 @@ static void dump_cls_fields(void* c, const char* tag) {
     LOGI("P5 %s fields=%d", tag, n);
 }
 
+static void probe_names(void* c, const char* tag) {
+    if (!c) { LOGI("P6 %s null", tag); return; }
+    void* it = NULL; void* m; int n = 0;
+    while ((m = x_class_get_methods && x_class_get_methods(c, &it)) != NULL && n < 260) {
+        const char* nm = x_method_get_name(m);
+        uint32_t pc = x_method_get_param_count ? x_method_get_param_count(m) : 0;
+        LOGI("P6 %s::%s pc=%u", tag, nm ? nm : "?", pc);
+        n++;
+    }
+    LOGI("P6 %s methods=%d", tag, n);
+}
+
+static void probe_level_flow(void) {
+    probe_names(class_of(g_image, "BattleLevelProxy"), "BattleLevelProxy");
+    probe_names(class_of(g_image, "BattleProxy"), "BattleProxy");
+    probe_names(class_of(g_image, "BattleMainPanel"), "BattleMainPanel");
+    // level/next 相关类
+    if (x_image_get_class_count && x_image_get_class && x_class_get_name) {
+        size_t cnt = x_image_get_class_count(g_image);
+        int hits = 0;
+        for (size_t i = 0; i < cnt && hits < 30; i++) {
+            void* c = x_image_get_class(g_image, i);
+            if (!c) continue;
+            const char* nm = x_class_get_name(c);
+            if (nm && (strstr(nm, "LevelProxy") || strstr(nm, "LevelData") || strstr(nm, "Stage"))) { LOGI("P6C %s", nm); hits++; }
+        }
+    }
+}
 static void probe_result_type(void) {
     void* bpp = class_of(g_image, "BattlePvpProxy");
     if (bpp && x_class_get_method_from_name) { g_m_set_result = x_class_get_method_from_name(bpp, "SetBattleResult", 2); g_m_check_result = x_class_get_method_from_name(bpp, "CheckResult", 0); LOGI("SetBattleResult=%p CheckResult=%p", g_m_set_result, g_m_check_result); }
@@ -1021,6 +1049,7 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
         probe_update_ptrs();
         probe_settle_api();
         probe_result_type();
+        probe_level_flow();
         probe_param_types("SettleBattleEvent");
         probe_param_types("BattlePvpProxy");
         probe_scan_classes();
