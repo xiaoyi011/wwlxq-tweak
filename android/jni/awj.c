@@ -82,6 +82,7 @@ static void* g_m_kill_robot;
 static void* g_m_exec_lua;
 static void* g_m_sp;
 static void* g_m_inv;
+static void* g_m_brute;
 static void* g_lua_input_field;
 static void* g_bpvp_field;
 static void* g_m_set_result;
@@ -144,6 +145,7 @@ static int resolve_game(void) {
     g_m_exec_lua = x_class_get_method_from_name(dv, "OnExecuteLuaClick", 0);
     g_m_sp = x_class_get_method_from_name(dv, "OnSpClick", 0);
     g_m_inv = x_class_get_method_from_name(dv, "OnSelfInvulnerableStationClick", 0);
+    g_m_brute = x_class_get_method_from_name(dv, "OnBruteForceTestClick", 0);
     g_lua_input_field = x_class_get_field_from_name(dv, "luaCodeInput");
     g_bpvp_field = x_class_get_field_from_name(bve, "battlePvpProxy");
     if (bpp) {
@@ -396,6 +398,14 @@ Java_com_awj_Native_inv(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
     ensure_thread();
     invoke0(g_m_inv, view());
+}
+
+JNIEXPORT void JNICALL
+Java_com_awj_Native_brute(JNIEnv* env, jclass cls) {
+    (void)env; (void)cls;
+    ensure_thread();
+    LOGI("brute click");
+    invoke0(g_m_brute, view());
 }
 
 JNIEXPORT void JNICALL
