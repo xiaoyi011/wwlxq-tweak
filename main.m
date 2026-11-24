@@ -27,6 +27,7 @@ static void awj_build_ui(void);
 static void gm_call2(int idx, int quiet);
 static void lic_activate_dialog(UIViewController* vc, void (^done)(BOOL, NSString*));
 static void do_set_speed(float rate);
+static void do_set_timescale(float v);
 
 static volatile float g_spd_saved = 0;  // 记忆的加速倍率（>1 自动应用）
 static volatile int g_t_sp  = 0;   // 无限银币/SP（持续，按钮 0）
@@ -139,6 +140,7 @@ static void* g_maxround_field;     // BattleLevelProxy.maxRound
 static void* g_round_field;        // BattlePvpProxy.round
 static void* g_ls_field;           // BaseViewExtend.battleLockStepCtrl (static)
 static void* g_m_set_speed;        // BattleLockStepCtrl.SetSpeedUpRate(float)
+static void* g_m_set_timescale;    // UnityEngine.Time.set_timeScale(float)
 static void* g_maxframes_field;    // BattleLockStepCtrl.maxLogicFramesPerTick
 static void* g_speed_field;        // BattleLockStepCtrl.speedUpRate
 static void* g_lua_input_field;    // BattleDebugActionView.luaCodeInput
@@ -181,6 +183,21 @@ static void* find_image(const char* prefix) {
                  strncmp(nm, prefix, strlen(prefix)) == 0) loose = img;
     }
     return exact ? exact : loose;
+}
+
+static void* find_image_exact(const char* name) {
+    void* d = x_domain_get();
+    if (!d) return NULL;
+    size_t cnt = 0;
+    void** asms = x_domain_get_assemblies(d, &cnt);
+    if (!asms) return NULL;
+    for (size_t i = 0; i < cnt; i++) {
+        void* img = x_assembly_get_image(asms[i]);
+        if (!img) continue;
+        const char* nm = x_image_get_name(img);
+        if (nm && strcmp(nm, name) == 0) return img;
+    }
+    return NULL;
 }
 
 // ---------------- GM 方法表 ----------------
@@ -269,6 +286,13 @@ static int resolve_game(void) {
     }
     LOG("speed api: ls=%d m=%d rate=%d max=%d", g_ls_field != NULL,
         g_m_set_speed != NULL, g_speed_field != NULL, g_maxframes_field != NULL);
+
+    void* core_img = find_image_exact("UnityEngine.CoreModule.dll");
+    if (core_img) {
+        void* tcls = x_class_from_name(core_img, "UnityEngine", "Time");
+        if (tcls) g_m_set_timescale = x_class_get_method_from_name(tcls, "set_timeScale", 1);
+    }
+    LOG("timescale api: %d", g_m_set_timescale != NULL);
 
     void* blp = class_of(g_image, "BattleLevelProxy");
     if (bve) g_level_field = x_class_get_field_from_name(bve, "battleLevelProxy");
@@ -458,8 +482,8 @@ static void* auto_thread(void* arg) {
         }
         if (tick % 4 == 0) {                         // 每 2 秒
             if (g_t_inv) run_on_main(^{ gm_call2(1, 1); });   // 无敌
-            if (g_spd_saved > 1.01f && g_ls_field)
-                run_on_main(^{ do_set_speed(g_spd_saved); }); // 记忆的加速自动生效
+            if (g_spd_saved > 1.01f)
+                run_on_main(^{ do_set_timescale(g_spd_saved); }); // 记忆的全局加速自动生效
         }
         usleep(500000);
     }
@@ -925,6 +949,17 @@ static void exec_cmd(const char* cmd) {
     LOG("cmd: %s exc=%d", cmd, exc != NULL);
 }
 
+static void do_set_timescale(float v) {
+    if (!g_m_set_timescale) { LOG("timescale: missing api"); return; }
+    if (v < 1.0f) v = 1.0f;
+    if (v > 20.0f) v = 20.0f;
+    float r = v;
+    void* params[1] = { &r };
+    void* exc = NULL;
+    x_runtime_invoke(g_m_set_timescale, NULL, params, &exc);
+    LOG("timescale %.1f exc=%d", r, exc != NULL);
+}
+
 static void do_set_speed(float rate) {
     if (rate <= 0) rate = 1;
     if (!g_ls_field || !g_m_set_speed) { LOG("speed: missing api"); return; }
@@ -1116,36 +1151,33 @@ static void awj_toggle_panel(void) {
     // ---- 命令输入行 ----
     CGFloat extraY = 6 + gridH + 16;
 
-    // 加速滑条（第 7 项）
-    UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, extraY + 8, 100, 24)];
-    spdLabel.text = @"加速: 1x";
+    // 全局加速滑条（Unity Time.timeScale，1-20x）
+    UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, extraY + 8, 120, 24)];
+    spdLabel.text = @"全局加速: 1x";
     spdLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
     spdLabel.font = [UIFont boldSystemFontOfSize:13];
     [sv addSubview:spdLabel];
 
-    UISlider* spdSlider = [[UISlider alloc] initWithFrame:CGRectMake(116, extraY + 11, w - 126, 18)];
+    UISlider* spdSlider = [[UISlider alloc] initWithFrame:CGRectMake(136, extraY + 11, w - 146, 18)];
     spdSlider.minimumValue = 1.0f;
-    spdSlider.maximumValue = 10.0f;
-    float savedSpd = [[NSUserDefaults standardUserDefaults] floatForKey:@"awj_speed"];
-    if (savedSpd < 1.0f || savedSpd > 10.0f) savedSpd = 1.0f;
+    spdSlider.maximumValue = 20.0f;
+    float savedSpd = [[NSUserDefaults standardUserDefaults] floatForKey:@"awj_tspeed"];
+    if (savedSpd < 1.0f || savedSpd > 20.0f) savedSpd = 1.0f;
     spdSlider.value = roundf(savedSpd);
-    spdLabel.text = [NSString stringWithFormat:@"加速: %.0fx", spdSlider.value];
+    spdLabel.text = [NSString stringWithFormat:@"全局加速: %.0fx", spdSlider.value];
     spdSlider.minimumTrackTintColor = [UIColor colorWithRed:0.15 green:0.6 blue:0.5 alpha:1];
     [spdSlider setThumbImage:awj_thumb() forState:UIControlStateNormal];
     [spdSlider setThumbImage:awj_thumb() forState:UIControlStateHighlighted];
     [spdSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
         float v = roundf(spdSlider.value);
         if (v < 1) v = 1;
-        if (v > 10) v = 10;
+        if (v > 20) v = 20;
         spdSlider.value = v;
-        spdLabel.text = [NSString stringWithFormat:@"加速: %.0fx", v];
-        [[NSUserDefaults standardUserDefaults] setFloat:v forKey:@"awj_speed"];
+        spdLabel.text = [NSString stringWithFormat:@"全局加速: %.0fx", v];
+        [[NSUserDefaults standardUserDefaults] setFloat:v forKey:@"awj_tspeed"];
         g_spd_saved = v;
-        run_on_main(^{ do_set_speed(v); });
+        run_on_main(^{ do_set_timescale(v); });
     }] forControlEvents:UIControlEventValueChanged];
-    [spdSlider addAction:[UIAction actionWithHandler:^(__kindof UIAction* a){
-        LOG("speed set %.0f", spdSlider.value);
-    }] forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
     [sv addSubview:spdSlider];
 
     NSArray* attrs = @[@"暴击", @"爆伤", @"伤害加成", @"最终攻击力千分比",
@@ -1359,8 +1391,8 @@ __attribute__((constructor))
 static void awj_init(void) {
     const char* home = getenv("HOME");
     LOG("loaded pid=%d home=%s", getpid(), home ? home : "?");
-    float spd0 = [[NSUserDefaults standardUserDefaults] floatForKey:@"awj_speed"];
-    if (spd0 >= 1.0f && spd0 <= 10.0f) g_spd_saved = spd0;
+    float spd0 = [[NSUserDefaults standardUserDefaults] floatForKey:@"awj_tspeed"];
+    if (spd0 >= 1.0f && spd0 <= 20.0f) g_spd_saved = spd0;
     awj_watch_volume();
     lic_check();
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
