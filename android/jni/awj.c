@@ -708,6 +708,22 @@ static int is_pvp(void) {
 }
 
 static void do_clear(void) {
+    int32_t cur = 0, maxr = 0;
+    if (g_bpvp_field && g_round_field && x_field_static_get_value && x_field_get_value) {
+        void* pp = NULL;
+        x_field_static_get_value(g_bpvp_field, &pp);
+        if (pp) x_field_get_value(pp, g_round_field, &cur);
+    }
+    if (g_level_field && g_maxround_field && x_field_static_get_value && x_field_get_value) {
+        void* lp = NULL;
+        x_field_static_get_value(g_level_field, &lp);
+        if (lp) x_field_get_value(lp, g_maxround_field, &maxr);
+    }
+    if (cur <= 0 || maxr <= 0) {
+        LOGI("clear skip round=%d max=%d", cur, maxr);
+        return;
+    }
+    LOGI("clear round=%d/%d", cur, maxr);
     invoke0(g_m_kill_monster, view());
 }
 
