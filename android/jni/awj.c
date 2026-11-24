@@ -909,9 +909,10 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
         probe_update_ptrs();
         probe_settle_api();
         probe_dump_class("BattleResultCtrl");
-        probe_dump_class("BattleLevelProxy");
-        probe_dump_class("BattleProxy");
-        probe_dump_class("BattleResultProxy");
+        probe_dump_class("BattlePvpProxy");
+        probe_dump_class("BattleResult");
+        probe_dump_class("SettleBattleEvent");
+        probe_dump_class("ScBattleLevelResult");
         probe_scan_classes();
     }
     return r;
