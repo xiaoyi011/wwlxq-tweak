@@ -803,6 +803,46 @@ static int unity_ready(void) {
     return ok;
 }
 
+static void probe_dump_class(const char* cn) {
+    void* c = class_of(g_image, cn);
+    if (!c) { LOGI("P3 %s: null", cn); return; }
+    void* it = NULL; void* m; int n = 0;
+    if (x_class_get_methods && x_method_get_name) {
+        while ((m = x_class_get_methods(c, &it)) != NULL && n < 200) {
+            const char* nm = x_method_get_name(m);
+            uint32_t pc = x_method_get_param_count ? x_method_get_param_count(m) : 0;
+            LOGI("P3M %s::%s pc=%u ptr=%p", cn, nm ? nm : "?", pc, x_method_get_pointer ? x_method_get_pointer(m) : NULL);
+            n++;
+        }
+    }
+    LOGI("P3 %s methods=%d", cn, n);
+    if (x_class_get_fields && x_field_get_name && x_field_get_type && x_type_get_name) {
+        void* fit = NULL; void* fld; int fn = 0;
+        while ((fld = x_class_get_fields(c, &fit)) != NULL && fn < 120) {
+            const char* fname = x_field_get_name(fld);
+            void* ft = x_field_get_type(fld);
+            const char* tname = ft && x_type_get_name ? x_type_get_name(ft) : "?";
+            LOGI("P3F %s::%s : %s", cn, fname ? fname : "?", tname ? tname : "?");
+            fn++;
+        }
+        LOGI("P3 %s fields=%d", cn, fn);
+    }
+}
+
+static void probe_scan_classes(void) {
+    if (!x_image_get_class_count || !x_image_get_class || !x_class_get_name) { LOGI("P3 scan: no api"); return; }
+    size_t cnt = x_image_get_class_count(g_image);
+    LOGI("P3 scan total=%zu", cnt);
+    int hits = 0;
+    for (size_t i = 0; i < cnt && hits < 40; i++) {
+        void* c = x_image_get_class(g_image, i);
+        if (!c) continue;
+        const char* nm = x_class_get_name(c);
+        if (!nm) continue;
+        if (strstr(nm, "Result") || strstr(nm, "Settle")) { LOGI("P3C %s", nm); hits++; }
+    }
+    LOGI("P3 scan hits=%d", hits);
+}
 static void probe_settle_api(void) {
     if (!x_class_get_methods || !x_method_get_name) { LOGI("P2 no api"); return; }
     const char* names[] = {"BattleResultProxy","BattleResultCtrl","BattleResultView","BattleLevelProxy",
@@ -865,7 +905,15 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
     if (x_thread_attach) { x_thread_attach(dom); LOGI("thread attached"); }
     int r = resolve_game() ? 1 : 0;
     LOGI("game resolve r=%d", r);
-    if (r) { probe_update_ptrs(); probe_settle_api(); }
+    if (r) {
+        probe_update_ptrs();
+        probe_settle_api();
+        probe_dump_class("BattleResultCtrl");
+        probe_dump_class("BattleLevelProxy");
+        probe_dump_class("BattleProxy");
+        probe_dump_class("BattleResultProxy");
+        probe_scan_classes();
+    }
     return r;
 }
 
