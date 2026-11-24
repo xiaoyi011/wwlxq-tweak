@@ -380,15 +380,14 @@ public final class Launcher {
                 panelSc.setVerticalScrollBarEnabled(true);
                 panelSc.addView(content, new android.widget.ScrollView.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                final int maxH = (int) (app.getResources().getDisplayMetrics().heightPixels * 0.55f);
                 FrameLayout panelRoot = new FrameLayout(act);
                 panelRootView = panelRoot;
                 panelRoot.addView(panelSc, new FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT, maxH));
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 final View v = panelRoot;
                 wm = (WindowManager) app.getSystemService(Context.WINDOW_SERVICE);
                 panelLp = new WindowManager.LayoutParams(
-                        dp(260), maxH,
+                        dp(260), WindowManager.LayoutParams.WRAP_CONTENT,
                         WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                                 | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
