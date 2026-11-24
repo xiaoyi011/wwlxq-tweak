@@ -540,7 +540,7 @@ static int resolve_game(void) {
         }
         LOGI("w2 done");
     }
-    {
+    if (0) {
         void* rctrl = class_of(g_image, "BattleReduceHpCtrl");
         if (rctrl && x_class_get_field_from_name) {
             void* f = x_class_get_field_from_name(rctrl, "battleEntityProxy");
