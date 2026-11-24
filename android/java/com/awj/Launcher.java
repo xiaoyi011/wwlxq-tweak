@@ -554,12 +554,13 @@ public final class Launcher {
         speedLabel.setText("加速（主线推荐3倍）: " + gsp + "x");
         speedLabel.setTextColor(C_DIM);
         speedLabel.setTextSize(11);
+        speedLabel.setPadding(0, dp(3), 0, 0);
         spdRow.addView(speedLabel, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT));
         SeekBar speedBar = new SeekBar(app);
         speedBar.setMax(9);
         speedBar.setProgress(gsp - 1);
-        LinearLayout.LayoutParams sblp = new LinearLayout.LayoutParams(0, dp(32), 1);
+        LinearLayout.LayoutParams sblp = new LinearLayout.LayoutParams(0, dp(34), 1);
         sblp.leftMargin = dp(6);
         sblp.gravity = Gravity.CENTER_VERTICAL;
         spdRow.addView(speedBar, sblp);
