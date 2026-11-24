@@ -515,6 +515,32 @@ public final class Launcher {
         addAttrSlider(p, "爆伤", "爆伤");
         addAttrSlider(p, "伤害加成", "伤害加成");
 
+        // Lua 命令台
+        p.addView(makeLabel("Lua 命令"));
+        final EditText luaIn = new EditText(app);
+        luaIn.setSingleLine(true);
+        luaIn.setHint("例：修改英雄属性 暴击 5000");
+        luaIn.setTextColor(C_TEXT);
+        luaIn.setHintTextColor(C_DIM);
+        luaIn.setTextSize(11);
+        luaIn.setBackground(bg(0xFF0D1729, 8));
+        p.addView(luaIn, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(38)));
+        TextView luaBtn = mkBtn("执行 Lua", C_ON);
+        luaBtn.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                final String code = luaIn.getText().toString().trim();
+                if (code.length() == 0) return;
+                new Thread(new Runnable() {
+                    public void run() { Native.lua(code); }
+                }).start();
+            }
+        });
+        LinearLayout.LayoutParams lbp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(36));
+        lbp.topMargin = dp(6);
+        p.addView(luaBtn, lbp);
+
         // 底部：到期 + 解绑
         LinearLayout foot = new LinearLayout(app);
         foot.setOrientation(LinearLayout.HORIZONTAL);
