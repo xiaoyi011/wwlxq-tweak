@@ -187,6 +187,18 @@ static int resolve_game(void) {
             if (!g_f_is_battle) g_f_is_battle = x_class_get_field_from_name(bpc, "isBeginBattle");
         }
         LOGI("isBattle field=%p", g_f_is_battle);
+        if (bdv && x_class_get_methods && x_method_get_name) {
+            void* it = NULL;
+            void* m;
+            int n = 0;
+            while ((m = x_class_get_methods(bdv, &it)) != NULL && n < 200) {
+                const char* mn = x_method_get_name(m);
+                if (mn && (strstr(mn, "Star") || strstr(mn, "Win") || strstr(mn, "Pass") ||
+                           strstr(mn, "Kill") || strstr(mn, "Result")))
+                    LOGI("BDV %s", mn);
+                n++;
+            }
+        }
     }
     g_m_fastfwd = x_class_get_method_from_name(dv, "OnFastForwardClicked", 0);
     g_m_place_hero = x_class_get_method_from_name(dv, "OnPlaceHeroClick", 0);
