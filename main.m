@@ -1160,7 +1160,7 @@ static void awj_toggle_panel(void) {
     CGFloat extraY = 6 + gridH + 16;
 
     // 全局加速滑条（Unity Time.timeScale，1-20x）
-    UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, extraY + 8, 190, 24)];
+    UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, extraY + 8, 150, 24)];
     spdLabel.text = @"加速（主线推荐3倍）: 1x";
     spdLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
     spdLabel.font = [UIFont boldSystemFontOfSize:12];
@@ -1168,7 +1168,7 @@ static void awj_toggle_panel(void) {
     spdLabel.minimumScaleFactor = 0.65;
     [sv addSubview:spdLabel];
 
-    UISlider* spdSlider = [[UISlider alloc] initWithFrame:CGRectMake(206, extraY + 11, w - 216, 18)];
+    UISlider* spdSlider = [[UISlider alloc] initWithFrame:CGRectMake(166, extraY + 11, w - 176, 18)];
     spdSlider.minimumValue = 1.0f;
     spdSlider.maximumValue = 10.0f;
     float savedSpd = [[NSUserDefaults standardUserDefaults] floatForKey:@"awj_tspeed"];
