@@ -444,6 +444,57 @@ public final class Launcher {
         return sp.getString("hero_spec", "雷神 4");
     }
 
+    static void showHeroPicker(final TextView btn) {
+        String saved = sp.getString("hero_list", "雷神 4|雷神 5|剑圣 5|冰女 5");
+        final java.util.List<String> items = new java.util.ArrayList<String>();
+        for (String s : saved.split("\\|")) if (s.trim().length() > 0) items.add(s.trim());
+        final android.app.Dialog d = new android.app.Dialog(app, android.R.style.Theme_Translucent_NoTitleBar);
+        LinearLayout p = new LinearLayout(app);
+        p.setOrientation(LinearLayout.VERTICAL);
+        p.setBackground(bg(0xF216233A, 12));
+        p.setPadding(dp(10), dp(8), dp(10), dp(8));
+        TextView t = new TextView(app);
+        t.setText("选择上阵英雄");
+        t.setTextColor(C_TEXT);
+        t.setTextSize(13);
+        t.setGravity(Gravity.CENTER);
+        p.addView(t, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(24)));
+        android.widget.ScrollView sc = new android.widget.ScrollView(app);
+        LinearLayout list = new LinearLayout(app);
+        list.setOrientation(LinearLayout.VERTICAL);
+        sc.addView(list, new android.widget.ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        for (final String item : items) {
+            TextView it = mkBtn(item, C_BTN);
+            LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(36));
+            ilp.topMargin = dp(6);
+            it.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    sp.edit().putString("hero_spec", item).apply();
+                    btn.setText("上阵 " + item);
+                    d.dismiss();
+                }
+            });
+            list.addView(it, ilp);
+        }
+        TextView custom = mkBtn("自定义…", C_ON);
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(34));
+        clp.topMargin = dp(8);
+        custom.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                d.dismiss();
+                showHeroDialog(btn);
+            }
+        });
+        list.addView(custom, clp);
+        p.addView(sc, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(200)));
+        d.setContentView(p, new ViewGroup.LayoutParams(dp(300), ViewGroup.LayoutParams.WRAP_CONTENT));
+        d.show();
+    }
+
     static void showHeroDialog(final TextView btn) {
         final android.app.Dialog d = new android.app.Dialog(app, android.R.style.Theme_Translucent_NoTitleBar);
         LinearLayout p = new LinearLayout(app);
@@ -483,6 +534,11 @@ public final class Launcher {
                 String spec = et.getText().toString().trim();
                 if (spec.length() == 0) spec = "雷神 4";
                 sp.edit().putString("hero_spec", spec).apply();
+                String list = sp.getString("hero_list", "");
+                if (!("|" + list + "|").contains("|" + spec + "|")) {
+                    list = list.length() == 0 ? spec : list + "|" + spec;
+                    sp.edit().putString("hero_list", list).apply();
+                }
                 btn.setText("上阵 " + spec);
                 d.dismiss();
             }
@@ -663,7 +719,7 @@ public final class Launcher {
         });
         bHero.setOnLongClickListener(new View.OnLongClickListener() {
             public boolean onLongClick(View v) {
-                showHeroDialog(bHero);
+                showHeroPicker(bHero);
                 return true;
             }
         });
