@@ -596,7 +596,7 @@ static int resolve_game(void) {
             }
         }
     }
-    {
+    if (0) {
         void* rc = class_of(g_image, "BattleReduceHpCtrl");
         void* v1 = NULL;
         void* v2 = NULL;
