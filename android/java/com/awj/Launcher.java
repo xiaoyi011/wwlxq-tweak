@@ -497,27 +497,6 @@ public final class Launcher {
         });
         p.addView(speedBar);
 
-        // 快进滑条 0-30 秒
-        p.addView(makeLabel("快进: 0 秒"));
-        final TextView ffLabel = (TextView) p.getChildAt(p.getChildCount() - 1);
-        SeekBar ffBar = new SeekBar(app);
-        ffBar.setMax(30);
-        ffBar.setProgress(0);
-        ffBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            public void onProgressChanged(SeekBar sb, int prog, boolean fromUser) {
-                ffLabel.setText("快进: " + prog + " 秒");
-            }
-            public void onStartTrackingTouch(SeekBar sb) {}
-            public void onStopTrackingTouch(SeekBar sb) {
-                final int sec = sb.getProgress();
-                if (sec <= 0) return;
-                new Thread(new Runnable() {
-                    public void run() { Native.fastForward(sec); }
-                }).start();
-            }
-        });
-        p.addView(ffBar);
-
         // 怪物血量滑条
         p.addView(makeLabel("怪物血量: 100%"));
         final TextView hpLabel = (TextView) p.getChildAt(p.getChildCount() - 1);
