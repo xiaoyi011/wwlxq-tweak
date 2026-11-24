@@ -125,8 +125,7 @@ static void* g_hero_input;
 static void* g_lua_input_field;
 static void* g_bpvp_field;
 static void* g_m_set_result;
-static void* g_m_check_result;
-static void* g_m_set_result;
+static void* g_m_disable_skill;
 static void* g_m_check_result;
 static void* g_bproxy_field;
 static void* g_m_is_pvp;
@@ -194,6 +193,7 @@ static int resolve_game(void) {
         if (bdv && mp) {
             g_debug_view_field = x_class_get_field_from_name(mp, "battleDebugView");
             g_m_open_debug = x_class_get_method_from_name(bdv, "OnOpenClick", 0);
+    if (dv) g_m_disable_skill = x_class_get_method_from_name(dv, "OnDisableRoleSkillClicked", 0);
         }
         LOGI("native gm entry: field=%p open=%p", g_debug_view_field, g_m_open_debug);
         void* bpc = class_of(g_image, "BattleProxy");
@@ -1136,6 +1136,7 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
         probe_names(class_of(g_image, "BattleDebugView"), "BattleDebugView");
         probe_names(class_of(g_image, "BattleEntityProxy"), "BattleEntityProxy");
         probe_names(class_of(g_image, "BattleEnterCtrl"), "BattleEnterCtrl");
+        probe_param_types("BattleEntityProxy");
         probe_param_types("BattleBaseEntity");
         dump_cls_fields(class_of(g_image, "BattleDefine"), "BattleDefine");
         dump_cls_fields(class_of(g_image, "BattlePrepareView"), "BattlePrepareView");
@@ -1211,6 +1212,14 @@ Java_com_awj_Native_sendOver(JNIEnv* env, jclass cls) {
     void* exc = NULL;
     x_runtime_invoke(m, proxy, NULL, &exc);
     LOGI("sendOver exc=%p", exc);
+}
+JNIEXPORT void JNICALL
+Java_com_awj_Native_skillCd(JNIEnv* env, jclass cls) {
+    (void)env; (void)cls;
+    ensure_thread();
+    if (!g_m_disable_skill) { LOGE("skillCd: no method"); return; }
+    invoke0(g_m_disable_skill, view());
+    LOGI("skillCd done");
 }
 JNIEXPORT jint JNICALL
 Java_com_awj_Native_ready(JNIEnv* env, jclass cls) {
