@@ -540,6 +540,61 @@ static int resolve_game(void) {
         }
         LOGI("w2 done");
     }
+    {
+        void* rctrl = class_of(g_image, "BattleReduceHpCtrl");
+        if (rctrl && x_class_get_field_from_name) {
+            void* f = x_class_get_field_from_name(rctrl, "battleEntityProxy");
+            if (f && x_field_static_get_value) {
+                void* v = NULL;
+                x_field_static_get_value(f, &v);
+                LOGI("PROBE proxy static=%p", v);
+            }
+        }
+        void* ed = class_of(g_image, "EntityData");
+        if (!ed && x_class_from_name) ed = x_class_from_name(g_image, "Game.BussinessData", "EntityData");
+        if (ed && x_class_get_field_from_name) {
+            void* fa = x_class_get_field_from_name(ed, "attr");
+            LOGI("PROBE EntityData attr field=%p", fa);
+            if (fa && x_field_get_type && x_class_from_type) {
+                void* ac = x_class_from_type(x_field_get_type(fa));
+                LOGI("PROBE attr class=%p", ac);
+                if (ac) {
+                    const char* need[] = {"base_crit", "add_crit", "base_crit_dmg", "add_crit_dmg",
+                                          "base_phy_atk", "add_phy_atk", "final_mult_phy_atk",
+                                          "final_mult_atk_speed", "base_atk_speed", "add_atk_speed",
+                                          "base_hit", "add_hit"};
+                    for (int i = 0; i < 12; i++) {
+                        void* af = x_class_get_field_from_name(ac, need[i]);
+                        LOGI("PROBE AF %s=%p", need[i], af);
+                    }
+                }
+            }
+        }
+        void* ep = class_of(g_image, "BattleEntityProxy");
+        if (ep && x_class_get_methods && x_method_get_name && x_method_get_param_count &&
+            x_method_get_param && x_type_get_name) {
+            void* it = NULL;
+            void* m;
+            int n = 0;
+            while ((m = x_class_get_methods(ep, &it)) != NULL && n < 120) {
+                const char* mn = x_method_get_name(m);
+                if (mn && (strstr(mn, "HeroEntity") || strcmp(mn, "GetEntity") == 0 ||
+                           strstr(mn, "GetEntityList"))) {
+                    uint32_t pc = x_method_get_param_count(m);
+                    char sig[128];
+                    sig[0] = 0;
+                    for (uint32_t p = 0; p < pc && p < 4; p++) {
+                        void* pt = x_method_get_param(m, p);
+                        const char* tn = pt ? x_type_get_name(pt) : NULL;
+                        strncat(sig, tn ? tn : "?", sizeof(sig) - strlen(sig) - 1);
+                        if (p + 1 < pc) strncat(sig, ",", sizeof(sig) - strlen(sig) - 1);
+                    }
+                    LOGI("PROBE EP %s(%s)", mn, sig);
+                }
+                n++;
+            }
+        }
+    }
     LOGI("resolved: kill=%d cheat=%d win=%d lua=%d speed=%d",
          g_m_kill_monster != NULL, g_m_cheat != NULL, g_m_kill_robot != NULL,
          g_m_exec_lua != NULL, g_m_set_speed != NULL);
