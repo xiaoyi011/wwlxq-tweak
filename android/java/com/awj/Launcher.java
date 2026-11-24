@@ -634,7 +634,7 @@ public final class Launcher {
             }
         });
         bStar.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { Native.starWin(3); }
+            public void onClick(View v) { Native.starWin(3); H.postDelayed(new Runnable() { public void run() { Native.finishWin(); } }, 800); }
         });
         bH1.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { Native.placeHero("妲己 4"); }
