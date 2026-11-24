@@ -553,7 +553,7 @@ public final class Launcher {
         final TextView speedLabel = new TextView(app);
         speedLabel.setText("加速（主线推荐3倍）: " + gsp + "x");
         speedLabel.setTextColor(C_DIM);
-        speedLabel.setTextSize(11);
+        speedLabel.setTextSize(10);
         speedLabel.setPadding(0, dp(3), 0, 0);
         spdRow.addView(speedLabel, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT));
