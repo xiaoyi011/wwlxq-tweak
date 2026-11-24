@@ -510,10 +510,11 @@ public final class Launcher {
         final TextView bH2 = mkBtn("召唤强袭", C_BTN);
         final TextView bH3 = mkBtn("召唤雷神", C_BTN);
         final TextView bHint = mkBtn("技能无CD", C_BTN);
+        final TextView bAuto = mkBtn("自动推关", C_BTN);
         bHint.setTextSize(11);
         bHint.setTextColor(C_TEXT);
 
-        View[] rows = new View[]{bClear, bWin, bSp, bInv, bStar, bHint};
+        View[] rows = new View[]{bClear, bWin, bSp, bInv, bStar, bHint, bAuto};
         for (int i = 0; i < rows.length; i += 2) {
             LinearLayout row = new LinearLayout(app);
             row.setOrientation(LinearLayout.HORIZONTAL);
@@ -646,6 +647,9 @@ public final class Launcher {
         });
         bHint.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { Native.skillCd(); }
+        });
+        bAuto.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { Native.autoPush(); }
         });
         bH1.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { Native.placeHero("妲己 4"); }
