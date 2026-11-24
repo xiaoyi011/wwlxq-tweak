@@ -542,6 +542,7 @@ static int resolve_game(void) {
     }
     if (0) {
         void* rctrl = class_of(g_image, "BattleReduceHpCtrl");
+        (void)rctrl;
         if (rctrl && x_class_get_field_from_name) {
             void* f = x_class_get_field_from_name(rctrl, "battleEntityProxy");
             if (f && x_field_static_get_value) {
@@ -590,6 +591,42 @@ static int resolve_game(void) {
                         if (p + 1 < pc) strncat(sig, ",", sizeof(sig) - strlen(sig) - 1);
                     }
                     LOGI("PROBE EP %s(%s)", mn, sig);
+                }
+                n++;
+            }
+        }
+    }
+    {
+        void* rc = class_of(g_image, "BattleReduceHpCtrl");
+        void* v1 = NULL;
+        void* v2 = NULL;
+        if (rc && x_class_get_field_from_name) {
+            void* f1 = x_class_get_field_from_name(rc, "battleEntityProxy");
+            void* f2 = x_class_get_field_from_name(rc, "battleProxy");
+            if (f1 && x_field_static_get_value) x_field_static_get_value(f1, &v1);
+            if (f2 && x_field_static_get_value) x_field_static_get_value(f2, &v2);
+        }
+        LOGI("P3 proxy=%p battle=%p", v1, v2);
+        void* ep = class_of(g_image, "BattleEntityProxy");
+        if (ep && x_class_get_methods && x_method_get_name && x_method_get_param_count &&
+            x_method_get_param && x_type_get_name) {
+            void* it = NULL;
+            void* m;
+            int n = 0;
+            while ((m = x_class_get_methods(ep, &it)) != NULL && n < 120) {
+                const char* mn = x_method_get_name(m);
+                if (mn && (strstr(mn, "HeroEntity") || strcmp(mn, "GetEntity") == 0 ||
+                           strstr(mn, "GetEntityList"))) {
+                    uint32_t pc = x_method_get_param_count(m);
+                    char sig[128];
+                    sig[0] = 0;
+                    for (uint32_t p = 0; p < pc && p < 4; p++) {
+                        void* pt = x_method_get_param(m, p);
+                        const char* tn = pt ? x_type_get_name(pt) : NULL;
+                        strncat(sig, tn ? tn : "?", sizeof(sig) - strlen(sig) - 1);
+                        if (p + 1 < pc) strncat(sig, ",", sizeof(sig) - strlen(sig) - 1);
+                    }
+                    LOGI("P3M %s(%s)", mn, sig);
                 }
                 n++;
             }
