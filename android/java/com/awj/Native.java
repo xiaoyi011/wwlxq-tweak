@@ -11,6 +11,7 @@ public final class Native {
     public static native void brute();
     public static native void win();
     public static native void sp();
+    public static native void setSp(long v);
     public static native void inv();
     public static native void speed(float rate);
     public static native void timeScale(float v);
