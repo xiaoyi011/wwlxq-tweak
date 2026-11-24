@@ -497,9 +497,9 @@ public final class Launcher {
         final TextView bSp = mkBtn("无限银币", C_BTN);
         final TextView bInv = mkBtn("无敌", C_BTN);
         final TextView bStar = mkBtn("3星通关", C_BTN);
-        final TextView bH1 = mkBtn("召唤雷神", C_BTN);
+        final TextView bH1 = mkBtn("召唤妲己", C_BTN);
         final TextView bH2 = mkBtn("召唤强袭", C_BTN);
-        final TextView bH3 = mkBtn("召唤妲己", C_BTN);
+        final TextView bH3 = mkBtn("召唤雷神", C_BTN);
         final TextView bHint = mkBtn("点悬浮球开关面板", 0xFF1C283C);
         bHint.setTextSize(9);
         bHint.setTextColor(C_DIM);
@@ -638,13 +638,13 @@ public final class Launcher {
             public void onClick(View v) { Native.starWin(3); }
         });
         bH1.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { Native.placeHero("雷神 4"); }
+            public void onClick(View v) { Native.placeHero("妲己 4"); }
         });
         bH2.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { Native.placeHero("强袭 4"); }
         });
         bH3.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { Native.placeHero("妲己 4"); }
+            public void onClick(View v) { Native.placeHero("雷神 4"); }
         });
         if (gsp > 1) {
             final int applySp = gsp;
