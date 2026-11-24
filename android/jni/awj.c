@@ -108,6 +108,7 @@ static void* g_m_change_attr_name;
 static void* g_m_change_attr_slot;
 static void* g_debug_view_field;
 static void* g_m_open_debug;
+static void* g_f_is_battle;
 static void* g_lua_input_field;
 static void* g_bpvp_field;
 static void* g_m_set_result;
@@ -178,6 +179,12 @@ static int resolve_game(void) {
             g_m_open_debug = x_class_get_method_from_name(bdv, "OnOpenClick", 0);
         }
         LOGI("native gm entry: field=%p open=%p", g_debug_view_field, g_m_open_debug);
+        void* bpc = class_of(g_image, "BattleProxy");
+        if (bpc) {
+            g_f_is_battle = x_class_get_field_from_name(bpc, "isBattle");
+            if (!g_f_is_battle) g_f_is_battle = x_class_get_field_from_name(bpc, "isBeginBattle");
+        }
+        LOGI("isBattle field=%p", g_f_is_battle);
     }
     g_m_fastfwd = x_class_get_method_from_name(dv, "OnFastForwardClicked", 0);
     g_ff_input = x_class_get_field_from_name(dv, "fastForwardInput");
@@ -805,10 +812,17 @@ Java_com_awj_Native_ready(JNIEnv* env, jclass cls) {
 }
 
 static int in_battle(void) {
-    if (!g_ls_field) return 0;
-    void* ls = NULL;
-    x_field_static_get_value(g_ls_field, &ls);
-    return ls != NULL;
+    if (!g_bpvp_field || !g_bproxy_field || !g_f_is_battle) return 0;
+    if (!x_field_static_get_value || !x_field_get_value) return 0;
+    void* pp = NULL;
+    x_field_static_get_value(g_bpvp_field, &pp);
+    if (!pp) return 0;
+    void* bp = NULL;
+    x_field_get_value(pp, g_bproxy_field, &bp);
+    if (!bp) return 0;
+    uint8_t v = 0;
+    x_field_get_value(bp, g_f_is_battle, &v);
+    return v ? 1 : 0;
 }
 
 JNIEXPORT jint JNICALL
