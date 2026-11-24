@@ -12,6 +12,8 @@ public final class Native {
     public static native void wallHp(long v);
     public static native void openGm();
     public static native int inBattle();
+    public static native void starWin(int stars);
+    public static native void placeHero(String name);
     public static native void win();
     public static native void sp();
     public static native void setSp(long v);
