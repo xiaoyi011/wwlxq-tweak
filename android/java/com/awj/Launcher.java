@@ -108,7 +108,7 @@ public final class Launcher {
                 logger("native init=" + r);
                 licenseCheck();
                 H.postDelayed(hbTask, 15000);
-                H.postDelayed(loopTask, 3000);
+                startGmLoop();
             }
         }).start();
     }
@@ -616,17 +616,26 @@ public final class Launcher {
         }
     };
 
-    static final Runnable loopTask = new Runnable() {
-        public void run() {
-            if (licensed) {
-                if (autoClear) Native.clear();
-                if (autoSp) Native.sp();
-                if (autoInv) Native.inv();
-                if (savedSpeed > 1f) Native.speed(savedSpeed);
+    static volatile boolean gmLoopStarted = false;
+
+    static void startGmLoop() {
+        if (gmLoopStarted) return;
+        gmLoopStarted = true;
+        new Thread(new Runnable() {
+            public void run() {
+                while (true) {
+                    try { Thread.sleep(1200); } catch (Exception ignored) {}
+                    if (!licensed) continue;
+                    try {
+                        if (autoClear) Native.clear();
+                        if (autoSp) Native.sp();
+                        if (autoInv) Native.inv();
+                        if (savedSpeed > 1f) Native.speed(savedSpeed);
+                    } catch (Throwable ignored) {}
+                }
             }
-            H.postDelayed(this, 2000);
-        }
-    };
+        }).start();
+    }
 
     // ---------------- 卡密 ----------------
     static void licenseCheck() {
