@@ -441,13 +441,12 @@ public final class Launcher {
         final TextView bStop = mkBtn("停止怪物移动", C_BTN);
         final TextView bSpAdd = mkBtn("加 SP", C_BTN);
         final TextView bSpSet = mkBtn("设置 SP 数值", C_BTN);
-        final TextView bBrute = mkBtn("暴力测试", C_BTN);
         final TextView bWall = mkBtn("城墙999999999（我方）", C_BTN);
         final TextView bHint = mkBtn("点悬浮球开关面板", 0xFF1C283C);
         bHint.setTextSize(9);
         bHint.setTextColor(C_DIM);
 
-        View[] rows = new View[]{bClear, bAutoWin, bStop, bSpAdd, bSpSet, bBrute, bWall, bHint};
+        View[] rows = new View[]{bClear, bAutoWin, bStop, bSpAdd, bSpSet, bWall, bHint};
         for (int i = 0; i < rows.length; i += 2) {
             LinearLayout row = new LinearLayout(app);
             row.setOrientation(LinearLayout.HORIZONTAL);
@@ -492,27 +491,6 @@ public final class Launcher {
         });
         p.addView(speedBar);
 
-        // 快进
-        p.addView(makeLabel("快进: 0 秒"));
-        final TextView ffLabel = (TextView) p.getChildAt(p.getChildCount() - 1);
-        SeekBar ffBar = new SeekBar(app);
-        ffBar.setMax(30);
-        ffBar.setProgress(0);
-        ffBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            public void onProgressChanged(SeekBar sb, int prog, boolean fromUser) {
-                ffLabel.setText("快进: " + prog + " 秒");
-            }
-            public void onStartTrackingTouch(SeekBar sb) {}
-            public void onStopTrackingTouch(SeekBar sb) {
-                final int sec = sb.getProgress();
-                if (sec <= 0) return;
-                new Thread(new Runnable() {
-                    public void run() { Native.fastForward(sec); }
-                }).start();
-            }
-        });
-        p.addView(ffBar);
-
         // 底部
         LinearLayout foot = new LinearLayout(app);
         foot.setOrientation(LinearLayout.HORIZONTAL);
@@ -538,6 +516,7 @@ public final class Launcher {
 
         bClear.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                Toast.makeText(app, "清场 已执行", Toast.LENGTH_SHORT).show();
                 new Thread(new Runnable() {
                     public void run() { Native.clear(); }
                 }).start();
@@ -545,6 +524,7 @@ public final class Launcher {
         });
         bStop.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                Toast.makeText(app, "停止移动 已执行", Toast.LENGTH_SHORT).show();
                 new Thread(new Runnable() {
                     public void run() { Native.stopMove(); }
                 }).start();
@@ -552,6 +532,7 @@ public final class Launcher {
         });
         bSpAdd.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                Toast.makeText(app, "加 SP 已执行", Toast.LENGTH_SHORT).show();
                 new Thread(new Runnable() {
                     public void run() { Native.sp(); }
                 }).start();
@@ -559,20 +540,15 @@ public final class Launcher {
         });
         bSpSet.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                Toast.makeText(app, "设置 SP 已执行", Toast.LENGTH_SHORT).show();
                 new Thread(new Runnable() {
                     public void run() { Native.setSp(999999); }
                 }).start();
             }
         });
-        bBrute.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                new Thread(new Runnable() {
-                    public void run() { Native.brute(); }
-                }).start();
-            }
-        });
         bWall.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                Toast.makeText(app, "城墙血量 已执行", Toast.LENGTH_SHORT).show();
                 new Thread(new Runnable() {
                     public void run() { Native.wallHp(999999999L); }
                 }).start();
