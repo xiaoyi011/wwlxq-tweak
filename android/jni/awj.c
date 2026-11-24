@@ -86,6 +86,8 @@ static void* g_m_brute;
 static void* g_ts_setter;
 static void* g_m_fastfwd;
 static void* g_ff_input;
+static void* g_m_set_sp;
+static void* g_sp_input;
 static void* g_lua_input_field;
 static void* g_bpvp_field;
 static void* g_m_set_result;
@@ -151,6 +153,8 @@ static int resolve_game(void) {
     g_m_brute = x_class_get_method_from_name(dv, "OnBruteForceTestClick", 0);
     g_m_fastfwd = x_class_get_method_from_name(dv, "OnFastForwardClicked", 0);
     g_ff_input = x_class_get_field_from_name(dv, "fastForwardInput");
+    g_m_set_sp = x_class_get_method_from_name(dv, "OnSetSp", 0);
+    g_sp_input = x_class_get_field_from_name(dv, "setSpInput");
     if (x_domain_assembly_open && g_domain) {
         void* core_asm = x_domain_assembly_open(g_domain, "UnityEngine.CoreModule");
         void* core_img = core_asm ? x_assembly_get_image(core_asm) : NULL;
@@ -435,6 +439,29 @@ Java_com_awj_Native_fastForward(JNIEnv* env, jclass cls, jint sec) {
     exc = NULL;
     x_runtime_invoke(g_m_fastfwd, v, NULL, &exc);
     LOGI("fastForward %d exc=%p", (int)sec, exc);
+}
+
+JNIEXPORT void JNICALL
+Java_com_awj_Native_setSp(JNIEnv* env, jclass cls, jlong v) {
+    (void)env; (void)cls;
+    ensure_thread();
+    void* vv = view();
+    if (!vv || !g_m_set_sp || !g_sp_input) { LOGE("setSp missing"); return; }
+    void* inp = NULL;
+    x_field_get_value(vv, g_sp_input, &inp);
+    if (!inp) return;
+    void* c2 = x_object_get_class(inp);
+    void* setter = c2 ? x_class_get_method_from_name(c2, "set_text", 1) : NULL;
+    if (!setter) return;
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%lld", (long long)v);
+    void* params[1] = { x_string_new(buf) };
+    void* exc = NULL;
+    x_runtime_invoke(setter, inp, params, &exc);
+    if (exc) return;
+    exc = NULL;
+    x_runtime_invoke(g_m_set_sp, vv, NULL, &exc);
+    LOGI("setSp %lld exc=%p", (long long)v, exc);
 }
 
 JNIEXPORT void JNICALL
