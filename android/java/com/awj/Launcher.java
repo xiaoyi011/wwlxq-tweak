@@ -549,13 +549,7 @@ public final class Launcher {
         });
         p.addView(hpBar);
 
-        // 属性滑条（暴击 / 爆伤 / 伤害加成）
-        addAttrSlider(p, "暴击", "暴击");
-        addAttrSlider(p, "爆伤", "爆伤");
-        addAttrSlider(p, "伤害加成", "伤害加成");
-        addAttrSlider(p, "最终攻击力千分比", "最终攻击力千分比");
-        addAttrSlider(p, "物理攻击", "物理攻击");
-        addAttrSlider(p, "攻速", "攻速");
+        // 英雄属性滑条已按需求移除
 
         // 底部：到期 + 解绑
         LinearLayout foot = new LinearLayout(app);
