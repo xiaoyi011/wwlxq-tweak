@@ -472,7 +472,7 @@ public final class Launcher {
             it.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     sp.edit().putString("hero_spec", item).apply();
-                    btn.setText("上阵 " + item);
+                    btn.setText("英雄: " + item);
                     d.dismiss();
                 }
             });
@@ -539,7 +539,7 @@ public final class Launcher {
                     list = list.length() == 0 ? spec : list + "|" + spec;
                     sp.edit().putString("hero_list", list).apply();
                 }
-                btn.setText("上阵 " + spec);
+                btn.setText("英雄: " + spec);
                 d.dismiss();
             }
         });
@@ -592,12 +592,13 @@ public final class Launcher {
         final TextView bSp = mkBtn("无限银币", C_BTN);
         final TextView bInv = mkBtn("无敌", C_BTN);
         final TextView bStar = mkBtn("3星通关", C_BTN);
-        final TextView bHero = mkBtn("上阵 " + heroSpec(), C_BTN);
+        final TextView bHeroSel = mkBtn("英雄: " + heroSpec(), C_BTN);
+        final TextView bHeroGo = mkBtn("召唤", C_ON);
         final TextView bHint = mkBtn("点悬浮球开关面板", 0xFF1C283C);
         bHint.setTextSize(9);
         bHint.setTextColor(C_DIM);
 
-        View[] rows = new View[]{bClear, bWin, bSp, bInv, bStar, bHero, bHint};
+        View[] rows = new View[]{bClear, bWin, bSp, bInv, bStar, bHeroSel, bHeroGo, bHint};
         for (int i = 0; i < rows.length; i += 2) {
             LinearLayout row = new LinearLayout(app);
             row.setOrientation(LinearLayout.HORIZONTAL);
@@ -714,14 +715,11 @@ public final class Launcher {
         bStar.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { Native.starWin(3); }
         });
-        bHero.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { Native.placeHero(heroSpec()); }
+        bHeroSel.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { showHeroPicker(bHeroSel); }
         });
-        bHero.setOnLongClickListener(new View.OnLongClickListener() {
-            public boolean onLongClick(View v) {
-                showHeroPicker(bHero);
-                return true;
-            }
+        bHeroGo.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { Native.placeHero(heroSpec()); }
         });
         if (gsp > 1) {
             final int applySp = gsp;
