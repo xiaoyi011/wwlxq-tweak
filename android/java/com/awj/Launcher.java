@@ -647,6 +647,7 @@ public final class Launcher {
         bH3.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { Native.placeHero("雷神 4"); }
         });
+        if (winHighlight) bWin.setBackground(bg(C_ON, 8));
         if (gsp > 1) {
             final int applySp = gsp;
             Native.speed(applySp);
