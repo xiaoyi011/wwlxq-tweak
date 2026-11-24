@@ -125,7 +125,9 @@ static void* g_hero_input;
 static void* g_lua_input_field;
 static void* g_bpvp_field;
 static void* g_m_set_result;
+static void* g_m_check_result;
 static void* g_m_set_result;
+static void* g_m_check_result;
 static void* g_bproxy_field;
 static void* g_m_is_pvp;
 static void* g_level_field;
@@ -171,7 +173,7 @@ static int resolve_game(void) {
     void* mp = class_of(g_image, "BattleMainPanel");
     void* bve = class_of(g_image, "BaseViewExtend");
     void* bpp = class_of(g_image, "BattlePvpProxy");
-    if (bpp && x_class_get_method_from_name) { g_m_set_result = x_class_get_method_from_name(bpp, "SetBattleResult", 2); LOGI("SetBattleResult=%p", g_m_set_result); }
+    if (bpp && x_class_get_method_from_name) { g_m_set_result = x_class_get_method_from_name(bpp, "SetBattleResult", 2); g_m_check_result = x_class_get_method_from_name(bpp, "CheckResult", 0); LOGI("SetBattleResult=%p CheckResult=%p", g_m_set_result, g_m_check_result); }
     void* bp  = class_of(g_image, "BattleProxy");
     void* blp = class_of(g_image, "BattleLevelProxy");
     void* lsc = class_of(g_image, "BattleLockStepCtrl");
@@ -854,7 +856,7 @@ static void dump_cls_fields(void* c, const char* tag) {
 
 static void probe_result_type(void) {
     void* bpp = class_of(g_image, "BattlePvpProxy");
-    if (bpp && x_class_get_method_from_name) { g_m_set_result = x_class_get_method_from_name(bpp, "SetBattleResult", 2); LOGI("SetBattleResult=%p", g_m_set_result); }
+    if (bpp && x_class_get_method_from_name) { g_m_set_result = x_class_get_method_from_name(bpp, "SetBattleResult", 2); g_m_check_result = x_class_get_method_from_name(bpp, "CheckResult", 0); LOGI("SetBattleResult=%p CheckResult=%p", g_m_set_result, g_m_check_result); }
     if (!bpp) { LOGI("P5 BattlePvpProxy null"); return; }
     void* rf = x_class_get_field_from_name ? x_class_get_field_from_name(bpp, "result") : NULL;
     LOGI("P5 result field=%p", rf);
@@ -1024,6 +1026,18 @@ Java_com_awj_Native_finishWin(JNIEnv* env, jclass cls) {
     void* exc = NULL;
     x_runtime_invoke(g_m_set_result, proxy, args, &exc);
     LOGI("finishWin proxy=%p exc=%p", proxy, exc);
+}
+JNIEXPORT void JNICALL
+Java_com_awj_Native_checkResult(JNIEnv* env, jclass cls) {
+    (void)env; (void)cls;
+    ensure_thread();
+    if (!g_bpvp_field || !g_m_check_result || !x_runtime_invoke) { LOGE("checkResult: no api"); return; }
+    void* proxy = NULL;
+    x_field_static_get_value(g_bpvp_field, &proxy);
+    if (!proxy) { LOGE("checkResult: no proxy"); return; }
+    void* exc = NULL;
+    x_runtime_invoke(g_m_check_result, proxy, NULL, &exc);
+    LOGI("checkResult proxy=%p exc=%p", proxy, exc);
 }
 JNIEXPORT jint JNICALL
 Java_com_awj_Native_ready(JNIEnv* env, jclass cls) {
