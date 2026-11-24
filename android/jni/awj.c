@@ -25,6 +25,9 @@ static void* (*x_class_get_method_from_name)(void*, const char*, int);
 static void* (*x_object_get_class)(void*);
 static void* (*x_class_get_field_from_name)(void*, const char*);
 static size_t (*x_field_get_offset)(void*);
+static void* (*x_class_get_type)(void*);
+static void* (*x_type_get_object)(void*);
+static void* g_unity_image;
 static const char* (*x_class_get_namespace)(void*);
 static const char* (*x_method_get_param_name)(void*, uint32_t);
 static void (*x_field_static_get_value)(void*, void*);
@@ -69,6 +72,8 @@ static int resolve_api(void) {
     RESOLVE(x_object_get_class, "il2cpp_object_get_class");
     RESOLVE(x_class_get_field_from_name, "il2cpp_class_get_field_from_name");
     RESOLVE(x_field_get_offset, "il2cpp_field_get_offset");
+    RESOLVE(x_class_get_type, "il2cpp_class_get_type");
+    RESOLVE(x_type_get_object, "il2cpp_type_get_object");
     RESOLVE(x_class_get_namespace, "il2cpp_class_get_namespace");
     RESOLVE(x_method_get_param_name, "il2cpp_method_get_param_name");
     RESOLVE(x_field_static_get_value, "il2cpp_field_static_get_value");
@@ -87,9 +92,6 @@ static int resolve_api(void) {
     RESOLVE(x_class_get_name, "il2cpp_class_get_name");
     RESOLVE(x_field_get_type, "il2cpp_field_get_type");
     RESOLVE(x_method_get_pointer, "il2cpp_method_get_pointer");
-    RESOLVE(x_field_get_offset, "il2cpp_field_get_offset");
-    RESOLVE(x_class_get_namespace, "il2cpp_class_get_namespace");
-    RESOLVE(x_method_get_param_name, "il2cpp_method_get_param_name");
     RESOLVE(x_field_get_flags, "il2cpp_field_get_flags");
     RESOLVE(x_type_get_name, "il2cpp_type_get_name");
     RESOLVE(x_method_get_param_count, "il2cpp_method_get_param_count");
@@ -1137,6 +1139,7 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
         probe_names(class_of(g_image, "BattleEntityProxy"), "BattleEntityProxy");
         probe_names(class_of(g_image, "BattleEnterCtrl"), "BattleEnterCtrl");
         probe_param_types("BattleEntityProxy");
+        { void* c2 = class_of(g_image, "BattleEntityProxy"); void* it2=NULL; void* m2; int n2=0; while (x_class_get_methods && (m2 = x_class_get_methods(c2,&it2)) != NULL && n2 < 300) { const char* nm2 = x_method_get_name(m2); if (nm2 && (strstr(nm2,"GetHero")||strstr(nm2,"GetEntity"))) { uint32_t pc2 = x_method_get_param_count ? x_method_get_param_count(m2) : 0; LOGI("PA %s pc=%u", nm2, pc2); for (uint32_t q=0;q<pc2 && q<5;q++){ void* pt=x_method_get_param?x_method_get_param(m2,q):NULL; const char* tn=pt&&x_type_get_name?x_type_get_name(pt):"?"; LOGI("PAP %s p%u : %s", nm2, q, tn?tn:"?"); } } n2++; } }
         probe_param_types("BattleBaseEntity");
         dump_cls_fields(class_of(g_image, "BattleDefine"), "BattleDefine");
         dump_cls_fields(class_of(g_image, "BattlePrepareView"), "BattlePrepareView");
@@ -1220,6 +1223,45 @@ Java_com_awj_Native_skillCd(JNIEnv* env, jclass cls) {
     if (!g_m_disable_skill) { LOGE("skillCd: no method"); return; }
     invoke0(g_m_disable_skill, view());
     LOGI("skillCd done");
+}
+static void* find_object_of_type(const char* cls_name) {
+    if (!x_class_get_type || !x_type_get_object || !x_runtime_invoke) return NULL;
+    void* c = class_of(g_image, cls_name);
+    if (!c) { LOGE("find %s: class null", cls_name); return NULL; }
+    void* t = x_class_get_type(c);
+    if (!t) { LOGE("find %s: type null", cls_name); return NULL; }
+    void* tobj = x_type_get_object(t);
+    if (!tobj) { LOGE("find %s: type object null", cls_name); return NULL; }
+    if (!g_unity_image && g_domain && x_domain_assembly_open && x_assembly_get_image) {
+        void* asm2 = x_domain_assembly_open(g_domain, "UnityEngine.CoreModule");
+        if (asm2) g_unity_image = x_assembly_get_image(asm2);
+        LOGI("unity image=%p", g_unity_image);
+    }
+    void* unity_obj_cls = g_unity_image && x_class_from_name ? x_class_from_name(g_unity_image, "UnityEngine", "Object") : NULL;
+    LOGI("unity Object cls=%p", unity_obj_cls);
+    if (!unity_obj_cls) return NULL;
+    void* m = x_class_get_method_from_name ? x_class_get_method_from_name(unity_obj_cls, "FindObjectOfType", 1) : NULL;
+    if (!m) { LOGE("find: no FindObjectOfType"); return NULL; }
+    void* args[1]; args[0] = tobj;
+    void* exc = NULL;
+    void* r = x_runtime_invoke(m, NULL, args, &exc);
+    LOGI("find %s r=%p exc=%p", cls_name, r, exc);
+    return r;
+}
+
+JNIEXPORT void JNICALL
+Java_com_awj_Native_autoPush(JNIEnv* env, jclass cls) {
+    (void)env; (void)cls;
+    ensure_thread();
+    void* v = find_object_of_type("BattlePrepareView");
+    if (!v) { LOGE("autoPush: view null"); return; }
+    if (!x_object_get_class) return;
+    void* c = x_object_get_class(v);
+    void* m = x_class_get_method_from_name ? x_class_get_method_from_name(c, "StartBattleNet", 0) : NULL;
+    if (!m) { LOGE("autoPush: no StartBattleNet"); return; }
+    void* exc = NULL;
+    x_runtime_invoke(m, v, NULL, &exc);
+    LOGI("autoPush view=%p exc=%p", v, exc);
 }
 JNIEXPORT jint JNICALL
 Java_com_awj_Native_ready(JNIEnv* env, jclass cls) {
