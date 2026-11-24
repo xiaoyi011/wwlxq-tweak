@@ -203,9 +203,11 @@ public final class Launcher {
                 float downX, downY;
                 int startX, startY;
                 boolean moved;
+                long downAt;
                 public boolean onTouch(View v, MotionEvent e) {
                     switch (e.getActionMasked()) {
                         case MotionEvent.ACTION_DOWN:
+                            downAt = System.currentTimeMillis();
                             downX = e.getRawX();
                             downY = e.getRawY();
                             startX = ovLp.x;
@@ -223,7 +225,16 @@ public final class Launcher {
                         }
                         case MotionEvent.ACTION_UP:
                             logger("ball up moved=" + moved);
-                            if (!moved) onBallClick(topActivity() != null ? topActivity() : curActivity);
+                            if (!moved) {
+                                if (System.currentTimeMillis() - downAt > 600) {
+                                    Activity act = topActivity() != null ? topActivity() : curActivity;
+                                    togglePanel(act);
+                                } else {
+                                    Activity act = topActivity() != null ? topActivity() : curActivity;
+                                    if (!licensed) showLicenseDialog(act, lockMsg.length() > 0 ? lockMsg : null);
+                                    else Native.openGm();
+                                }
+                            }
                             return true;
                     }
                     return false;
@@ -484,9 +495,7 @@ public final class Launcher {
                 final float v = sb.getProgress() + 1;
                 savedSpeed = v;
                 sp.edit().putFloat("speed", v).apply();
-                new Thread(new Runnable() {
-                    public void run() { Native.speed(v); }
-                }).start();
+                Native.speed(v);
             }
         });
         p.addView(speedBar);
@@ -517,41 +526,31 @@ public final class Launcher {
         bClear.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 Toast.makeText(app, "清场 已执行", Toast.LENGTH_SHORT).show();
-                new Thread(new Runnable() {
-                    public void run() { Native.clear(); }
-                }).start();
+                Native.clear();
             }
         });
         bStop.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 Toast.makeText(app, "停止移动 已执行", Toast.LENGTH_SHORT).show();
-                new Thread(new Runnable() {
-                    public void run() { Native.stopMove(); }
-                }).start();
+                Native.stopMove();
             }
         });
         bSpAdd.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 Toast.makeText(app, "加 SP 已执行", Toast.LENGTH_SHORT).show();
-                new Thread(new Runnable() {
-                    public void run() { Native.sp(); }
-                }).start();
+                Native.sp();
             }
         });
         bSpSet.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 Toast.makeText(app, "设置 SP 已执行", Toast.LENGTH_SHORT).show();
-                new Thread(new Runnable() {
-                    public void run() { Native.setSp(999999); }
-                }).start();
+                Native.setSp(999999);
             }
         });
         bWall.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 Toast.makeText(app, "城墙血量 已执行", Toast.LENGTH_SHORT).show();
-                new Thread(new Runnable() {
-                    public void run() { Native.wallHp(999999999L); }
-                }).start();
+                Native.wallHp(999999999L);
             }
         });
         bAutoWin.setOnClickListener(new View.OnClickListener() {
@@ -563,9 +562,7 @@ public final class Launcher {
 
         if (gsp > 1) {
             final int applySp = gsp;
-            new Thread(new Runnable() {
-                public void run() { Native.speed(applySp); }
-            }).start();
+            Native.speed(applySp);
         }
         return p;
     }
@@ -620,7 +617,11 @@ public final class Launcher {
                 while (true) {
                     try { Thread.sleep(3000); } catch (Exception ignored) {}
                     if (licensed && autoWin) {
-                        try { Native.win(); } catch (Throwable ignored) {}
+                        H.post(new Runnable() {
+                            public void run() {
+                                try { Native.win(); } catch (Throwable ignored) {}
+                            }
+                        });
                     }
                 }
             }
