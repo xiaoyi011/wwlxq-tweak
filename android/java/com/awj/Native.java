@@ -10,6 +10,7 @@ public final class Native {
     public static native void cheat();
     public static native void brute();
     public static native void wallHp(long v);
+    public static native void openGm();
     public static native void win();
     public static native void sp();
     public static native void setSp(long v);
