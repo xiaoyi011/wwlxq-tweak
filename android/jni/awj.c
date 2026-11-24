@@ -1101,6 +1101,9 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
         probe_level_flow();
         probe_entry_scan();
         probe_static_refs();
+        probe_names(class_of(g_image, "BattleEntityProxy"), "BattleEntityProxy");
+        probe_names(class_of(g_image, "BattleEnterCtrl"), "BattleEnterCtrl");
+        probe_param_types("BattleBaseEntity");
         dump_cls_fields(class_of(g_image, "BattleDefine"), "BattleDefine");
         dump_cls_fields(class_of(g_image, "BattlePrepareView"), "BattlePrepareView");
         dump_cls_fields(class_of(g_image, "BattleEnterCtrl"), "BattleEnterCtrl");
