@@ -804,10 +804,24 @@ Java_com_awj_Native_ready(JNIEnv* env, jclass cls) {
     return (g_main_panel_field && g_m_kill_monster) ? 1 : 0;
 }
 
+static int in_battle(void) {
+    if (!g_ls_field) return 0;
+    void* ls = NULL;
+    x_field_static_get_value(g_ls_field, &ls);
+    return ls != NULL;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_awj_Native_inBattle(JNIEnv* env, jclass cls) {
+    (void)env; (void)cls;
+    return in_battle();
+}
+
 JNIEXPORT void JNICALL
 Java_com_awj_Native_clear(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
     ensure_thread();
+    if (!in_battle()) return;
     static int cnt = 0;
     cnt++;
     void* v = view();
