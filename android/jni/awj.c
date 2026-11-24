@@ -462,6 +462,41 @@ static int resolve_game(void) {
         }
         LOGI("tgt done");
     }
+    if (x_image_get_class_count && x_image_get_class && x_class_get_name &&
+        x_class_get_fields && x_field_get_name) {
+        size_t cw = x_image_get_class_count(g_image);
+        int shown = 0;
+        for (size_t i = 0; i < cw && shown < 15; i++) {
+            void* c = x_image_get_class(g_image, i);
+            const char* n = c ? x_class_get_name(c) : NULL;
+            if (!n) continue;
+            if (!strstr(n, "Rampart") && !strstr(n, "Station") &&
+                !strstr(n, "Wall") && !strstr(n, "Castle")) continue;
+            shown++;
+            LOGI("WCLS %s", n);
+            void* it = NULL;
+            void* f;
+            int k = 0;
+            while ((f = x_class_get_fields(c, &it)) != NULL && k < 20) {
+                const char* fn = x_field_get_name(f);
+                if (fn) LOGI("  WF %s", fn);
+                k++;
+            }
+            if (x_class_get_methods && x_method_get_name) {
+                it = NULL;
+                void* m;
+                k = 0;
+                while ((m = x_class_get_methods(c, &it)) != NULL && k < 25) {
+                    const char* mn = x_method_get_name(m);
+                    if (mn && (strstr(mn, "Hp") || strstr(mn, "Attr") || strstr(mn, "Set") ||
+                               strstr(mn, "Get") || strstr(mn, "Change") || strstr(mn, "Add")))
+                        LOGI("  WM %s", mn);
+                    k++;
+                }
+            }
+        }
+        LOGI("wallscan shown=%d", shown);
+    }
     LOGI("resolved: kill=%d cheat=%d win=%d lua=%d speed=%d",
          g_m_kill_monster != NULL, g_m_cheat != NULL, g_m_kill_robot != NULL,
          g_m_exec_lua != NULL, g_m_set_speed != NULL);
@@ -737,6 +772,13 @@ Java_com_awj_Native_inv(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
     ensure_thread();
     invoke0(g_m_inv, view());
+}
+
+JNIEXPORT void JNICALL
+Java_com_awj_Native_wallHp(JNIEnv* env, jclass cls, jlong v) {
+    (void)env; (void)cls;
+    ensure_thread();
+    LOGI("wallHp %lld (pending)", (long long)v);
 }
 
 JNIEXPORT void JNICALL
