@@ -1254,7 +1254,25 @@ Java_com_awj_Native_autoPush(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
     ensure_thread();
     void* v = find_object_of_type("BattlePrepareView");
-    if (!v) { LOGE("autoPush: view null"); return; }
+    if (!v) {
+        LOGE("autoPush: view null, try net");
+        void* proxy = NULL;
+        if (g_bpvp_field && x_field_static_get_value) x_field_static_get_value(g_bpvp_field, &proxy);
+        if (proxy && x_object_get_class && x_class_get_method_from_name && x_runtime_invoke) {
+            void* pc2 = x_object_get_class(proxy);
+            const char* cand[] = {"SendMsg16500","SendMsg16507","SendMsg16516"};
+            for (int i = 0; i < 3; i++) {
+                void* mm = x_class_get_method_from_name(pc2, cand[i], 0);
+                if (mm) {
+                    void* exc2 = NULL;
+                    x_runtime_invoke(mm, proxy, NULL, &exc2);
+                    LOGI("autoPush net %s exc=%p", cand[i], exc2);
+                    if (!exc2) return;
+                }
+            }
+        }
+        return;
+    }
     if (!x_object_get_class) return;
     void* c = x_object_get_class(v);
     void* m = x_class_get_method_from_name ? x_class_get_method_from_name(c, "StartBattleNet", 0) : NULL;
