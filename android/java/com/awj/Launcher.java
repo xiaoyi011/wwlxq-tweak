@@ -598,7 +598,7 @@ public final class Launcher {
         bHint.setTextSize(9);
         bHint.setTextColor(C_DIM);
 
-        View[] rows = new View[]{bClear, bWin, bSp, bInv, bStar, bHeroSel, bHeroGo, bHint};
+        View[] rows = new View[]{bClear, bWin, bSp, bInv, bStar, bHint};
         for (int i = 0; i < rows.length; i += 2) {
             LinearLayout row = new LinearLayout(app);
             row.setOrientation(LinearLayout.HORIZONTAL);
@@ -619,6 +619,18 @@ public final class Launcher {
             }
             p.addView(row);
         }
+
+        // 上阵英雄一行（选择 + 召唤），放在加速上方
+        LinearLayout heroRow = new LinearLayout(app);
+        heroRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams hrlp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(40));
+        hrlp.topMargin = dp(8);
+        p.addView(heroRow, hrlp);
+        heroRow.addView(bHeroSel, new LinearLayout.LayoutParams(0, dp(40), 1));
+        LinearLayout.LayoutParams hglp = new LinearLayout.LayoutParams(dp(88), dp(40));
+        hglp.leftMargin = dp(8);
+        heroRow.addView(bHeroGo, hglp);
 
         // 加速（战斗）——文字和滑条同一行
         final int gsp = Math.max(1, Math.min(10, (int) savedSpeed));
