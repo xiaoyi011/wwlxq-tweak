@@ -25,6 +25,8 @@ static void* (*x_class_get_method_from_name)(void*, const char*, int);
 static void* (*x_object_get_class)(void*);
 static void* (*x_class_get_field_from_name)(void*, const char*);
 static size_t (*x_field_get_offset)(void*);
+static const char* (*x_class_get_namespace)(void*);
+static const char* (*x_method_get_param_name)(void*, uint32_t);
 static void (*x_field_static_get_value)(void*, void*);
 static void (*x_field_get_value)(void*, void*, void*);
 static void (*x_field_set_value)(void*, void*, void*);
@@ -41,7 +43,6 @@ static void* (*x_image_get_class)(void*, size_t);
 static const char* (*x_class_get_name)(void*);
 static void* (*x_field_get_type)(void*);
 static void* (*x_method_get_pointer)(void*);
-static size_t (*x_field_get_offset)(void*);
 static uint32_t (*x_field_get_flags)(void*);
 static const char* (*x_type_get_name)(void*);
 static uint32_t (*x_method_get_param_count)(void*);
@@ -68,6 +69,8 @@ static int resolve_api(void) {
     RESOLVE(x_object_get_class, "il2cpp_object_get_class");
     RESOLVE(x_class_get_field_from_name, "il2cpp_class_get_field_from_name");
     RESOLVE(x_field_get_offset, "il2cpp_field_get_offset");
+    RESOLVE(x_class_get_namespace, "il2cpp_class_get_namespace");
+    RESOLVE(x_method_get_param_name, "il2cpp_method_get_param_name");
     RESOLVE(x_field_static_get_value, "il2cpp_field_static_get_value");
     RESOLVE(x_field_get_value, "il2cpp_field_get_value");
     RESOLVE(x_field_set_value, "il2cpp_field_set_value");
@@ -85,6 +88,8 @@ static int resolve_api(void) {
     RESOLVE(x_field_get_type, "il2cpp_field_get_type");
     RESOLVE(x_method_get_pointer, "il2cpp_method_get_pointer");
     RESOLVE(x_field_get_offset, "il2cpp_field_get_offset");
+    RESOLVE(x_class_get_namespace, "il2cpp_class_get_namespace");
+    RESOLVE(x_method_get_param_name, "il2cpp_method_get_param_name");
     RESOLVE(x_field_get_flags, "il2cpp_field_get_flags");
     RESOLVE(x_type_get_name, "il2cpp_type_get_name");
     RESOLVE(x_method_get_param_count, "il2cpp_method_get_param_count");
@@ -844,7 +849,7 @@ static void probe_result_obj(void) {
         }
     }
     void* it2 = NULL; void* m2; int k = 0;
-    while ((m2 = x_class_get_methods && x_class_get_methods(c, &it2)) != NULL && k < 40) {
+    while (x_class_get_methods && (m2 = x_class_get_methods(c, &it2)) != NULL && k < 40) {
         const char* nm = x_method_get_name(m2);
         uint32_t pc = x_method_get_param_count ? x_method_get_param_count(m2) : 0;
         LOGI("P4RM %s pc=%u ptr=%p", nm ? nm : "?", pc, x_method_get_pointer ? x_method_get_pointer(m2) : NULL);
