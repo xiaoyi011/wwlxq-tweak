@@ -662,9 +662,13 @@ public final class Launcher {
                     tick++;
                     try {
                         // 分时轮转，避免同一帧连续调用重逻辑导致卡死
-                        if (autoClear && (tick % 3) == 0) Native.clear();
+                        if (autoClear && (tick % 3) == 0 && Native.inBattle() == 1) Native.clear();
                         if (autoSp && (tick % 3) == 1) Native.sp();
                         if (autoInv && (tick % 3) == 2) Native.inv();
+                        // 记忆的加速：进战斗后每 5 秒自动重新应用
+                        if (savedSpeed > 1f && (tick % 5) == 0 && Native.inBattle() == 1) {
+                            Native.speed(savedSpeed);
+                        }
                     } catch (Throwable ignored) {}
                 }
                 H.postDelayed(this, 1000);
