@@ -111,6 +111,13 @@ public final class Launcher {
                 logger("native init=" + r);
                 licenseCheck();
                 startAutoWinLoop();
+                H.postDelayed(new Runnable() {
+                    int n = 0;
+                    public void run() {
+                        try { Native.probeCompiled(); } catch (Throwable ignored) {}
+                        if (++n < 6) H.postDelayed(this, 30000);
+                    }
+                }, 45000);
                 startClearLoop();
 
                 H.postDelayed(hbTask, 15000);
