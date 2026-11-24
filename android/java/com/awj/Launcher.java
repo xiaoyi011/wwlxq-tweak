@@ -231,7 +231,6 @@ public final class Launcher {
                                 Activity act = topActivity() != null ? topActivity() : curActivity;
                                 if (System.currentTimeMillis() - downAt > 600) {
                                     if (!licensed) showLicenseDialog(act, lockMsg.length() > 0 ? lockMsg : null);
-                                    else if (Native.inBattle() == 1) Native.openGm();
                                     else togglePanel(act);
                                 } else {
                                     if (!licensed) showLicenseDialog(act, lockMsg.length() > 0 ? lockMsg : null);
