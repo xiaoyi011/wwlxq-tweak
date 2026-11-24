@@ -72,7 +72,7 @@ public final class Launcher {
         app = ctx.getApplicationContext();
         sp = app.getSharedPreferences("awj", Context.MODE_PRIVATE);
         savedSpeed = sp.getFloat("speed", 1f);
-        if (savedSpeed < 1f || savedSpeed > 10f) savedSpeed = 1f;
+        if (savedSpeed < 1f || savedSpeed > 20f) savedSpeed = 1f;
 
         if (ctx instanceof Application) {
             ((Application) ctx).registerActivityLifecycleCallbacks(new Application.ActivityLifecycleCallbacks() {
@@ -475,10 +475,10 @@ public final class Launcher {
         // 简化：不使用 bClear，保持 6 格布局
 
         // 全局加速滑条 1-15x
-        final int gsp = Math.max(1, Math.min(15, (int) savedSpeed));
+        final int gsp = Math.max(1, Math.min(20, (int) savedSpeed));
         p.addView(makeLabel("全局加速: " + gsp + "x"));
         SeekBar speedBar = new SeekBar(app);
-        speedBar.setMax(14);
+        speedBar.setMax(19);
         speedBar.setProgress(gsp - 1);
         final TextView speedLabel = (TextView) p.getChildAt(p.getChildCount() - 1);
         speedBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
