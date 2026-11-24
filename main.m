@@ -1160,19 +1160,21 @@ static void awj_toggle_panel(void) {
     CGFloat extraY = 6 + gridH + 16;
 
     // 全局加速滑条（Unity Time.timeScale，1-20x）
-    UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, extraY + 8, 120, 24)];
-    spdLabel.text = @"加速: 1x";
+    UILabel* spdLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, extraY + 4, w - 20, 22)];
+    spdLabel.text = @"加速（主线推荐3倍）: 1x";
     spdLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
     spdLabel.font = [UIFont boldSystemFontOfSize:13];
+    spdLabel.adjustsFontSizeToFitWidth = YES;
+    spdLabel.minimumScaleFactor = 0.7;
     [sv addSubview:spdLabel];
 
-    UISlider* spdSlider = [[UISlider alloc] initWithFrame:CGRectMake(136, extraY + 11, w - 146, 18)];
+    UISlider* spdSlider = [[UISlider alloc] initWithFrame:CGRectMake(10, extraY + 26, w - 20, 18)];
     spdSlider.minimumValue = 1.0f;
     spdSlider.maximumValue = 10.0f;
     float savedSpd = [[NSUserDefaults standardUserDefaults] floatForKey:@"awj_tspeed"];
     if (savedSpd < 1.0f || savedSpd > 10.0f) savedSpd = 1.0f;
     spdSlider.value = roundf(savedSpd);
-    spdLabel.text = [NSString stringWithFormat:@"加速: %.0fx", spdSlider.value];
+    spdLabel.text = [NSString stringWithFormat:@"加速（主线推荐3倍）: %.0fx", spdSlider.value];
     spdSlider.minimumTrackTintColor = [UIColor colorWithRed:0.15 green:0.6 blue:0.5 alpha:1];
     [spdSlider setThumbImage:awj_thumb() forState:UIControlStateNormal];
     [spdSlider setThumbImage:awj_thumb() forState:UIControlStateHighlighted];
@@ -1181,7 +1183,7 @@ static void awj_toggle_panel(void) {
         if (v < 1) v = 1;
         if (v > 10) v = 10;
         spdSlider.value = v;
-        spdLabel.text = [NSString stringWithFormat:@"加速: %.0fx", v];
+        spdLabel.text = [NSString stringWithFormat:@"加速（主线推荐3倍）: %.0fx", v];
         [[NSUserDefaults standardUserDefaults] setFloat:v forKey:@"awj_tspeed"];
         g_spd_saved = v;
         run_on_main(^{ do_set_speed(v); });   // 战斗加速（1-20x）
@@ -1193,7 +1195,7 @@ static void awj_toggle_panel(void) {
 
     for (int a = 0; a < (int)attrs.count; a++) {
         NSString* name = attrs[a];
-        CGFloat ry = extraY + rowH + 6 + a * attrRowH;
+        CGFloat ry = extraY + rowH + 12 + a * attrRowH;
 
         UILabel* nameLab = [[UILabel alloc] initWithFrame:CGRectMake(10, ry + 2, 170, 18)];
         nameLab.text = name;
@@ -1245,7 +1247,7 @@ static void awj_toggle_panel(void) {
     }
 
     // 怪物血量滑条（放到最下面）
-    CGFloat hy = extraY + rowH + attrH + 12;
+    CGFloat hy = extraY + rowH + attrH + 24;
     UILabel* hpLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, hy + 2, 200, 18)];
     hpLabel.text = @"怪物血量: 100%";
     hpLabel.textColor = [UIColor colorWithWhite:0.9 alpha:1];
