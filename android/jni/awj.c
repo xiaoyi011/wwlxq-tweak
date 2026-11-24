@@ -329,11 +329,10 @@ Java_com_awj_Native_clear(JNIEnv* env, jclass cls) {
     ensure_thread();
     static int cnt = 0;
     cnt++;
-    if (cnt <= 3 || (cnt % 30) == 0) {
-        void* v = view();
-        LOGI("clear #%d view=%p", cnt, v);
-    }
+    void* v = view();
+    if (cnt <= 5 || (cnt % 30) == 0) LOGI("clear #%d view=%p method=%p", cnt, v, g_m_kill_monster);
     do_clear();
+    if (cnt <= 5) LOGI("clear #%d done", cnt);
 }
 
 JNIEXPORT void JNICALL
