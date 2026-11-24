@@ -83,6 +83,9 @@ static void* g_m_exec_lua;
 static void* g_m_sp;
 static void* g_m_inv;
 static void* g_m_brute;
+static void* g_ts_setter;
+static void* g_m_fastfwd;
+static void* g_ff_input;
 static void* g_lua_input_field;
 static void* g_bpvp_field;
 static void* g_m_set_result;
@@ -146,6 +149,19 @@ static int resolve_game(void) {
     g_m_sp = x_class_get_method_from_name(dv, "OnSpClick", 0);
     g_m_inv = x_class_get_method_from_name(dv, "OnSelfInvulnerableStationClick", 0);
     g_m_brute = x_class_get_method_from_name(dv, "OnBruteForceTestClick", 0);
+    g_m_fastfwd = x_class_get_method_from_name(dv, "OnFastForwardClicked", 0);
+    g_ff_input = x_class_get_field_from_name(dv, "fastForwardInput");
+    if (x_domain_assembly_open && g_domain) {
+        void* core_asm = x_domain_assembly_open(g_domain, "UnityEngine.CoreModule");
+        void* core_img = core_asm ? x_assembly_get_image(core_asm) : NULL;
+        void* time_cls = core_img ? x_class_from_name(core_img, "UnityEngine", "Time") : NULL;
+        if (time_cls) {
+            g_ts_setter = x_class_get_method_from_name(time_cls, "set_timeScale", 1);
+            LOGI("timeScale setter=%p", g_ts_setter);
+        } else {
+            LOGE("Time class not found");
+        }
+    }
     g_lua_input_field = x_class_get_field_from_name(dv, "luaCodeInput");
     g_bpvp_field = x_class_get_field_from_name(bve, "battlePvpProxy");
     if (bpp) {
@@ -384,6 +400,41 @@ Java_com_awj_Native_speed(JNIEnv* env, jclass cls, jfloat rate) {
     (void)env; (void)cls;
     ensure_thread();
     do_speed(rate);
+}
+
+JNIEXPORT void JNICALL
+Java_com_awj_Native_timeScale(JNIEnv* env, jclass cls, jfloat v) {
+    (void)env; (void)cls;
+    ensure_thread();
+    if (!g_ts_setter) { LOGE("timeScale setter missing"); return; }
+    float r = v;
+    void* params[1] = { &r };
+    void* exc = NULL;
+    x_runtime_invoke(g_ts_setter, NULL, params, &exc);
+    LOGI("timeScale=%.2f exc=%p", r, exc);
+}
+
+JNIEXPORT void JNICALL
+Java_com_awj_Native_fastForward(JNIEnv* env, jclass cls, jint sec) {
+    (void)env; (void)cls;
+    ensure_thread();
+    void* v = view();
+    if (!v || !g_ff_input || !g_m_fastfwd || !x_string_new) { LOGE("ff missing"); return; }
+    void* inp = NULL;
+    x_field_get_value(v, g_ff_input, &inp);
+    if (!inp) return;
+    void* cls2 = x_object_get_class(inp);
+    void* setter = cls2 ? x_class_get_method_from_name(cls2, "set_text", 1) : NULL;
+    if (!setter) return;
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%d", (int)sec);
+    void* params[1] = { x_string_new(buf) };
+    void* exc = NULL;
+    x_runtime_invoke(setter, inp, params, &exc);
+    if (exc) { LOGI("ff set_text exc"); return; }
+    exc = NULL;
+    x_runtime_invoke(g_m_fastfwd, v, NULL, &exc);
+    LOGI("fastForward %d exc=%p", (int)sec, exc);
 }
 
 JNIEXPORT void JNICALL
