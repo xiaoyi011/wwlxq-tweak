@@ -485,11 +485,13 @@ public final class Launcher {
         final TextView bWin = mkBtn("PVP直接胜利", C_BTN);
         final TextView bSp = mkBtn("无限银币", C_BTN);
         final TextView bInv = mkBtn("无敌", C_BTN);
+        final TextView bStar = mkBtn("3星通关", C_BTN);
+        final TextView bHero = mkBtn("上阵雷神4", C_BTN);
         final TextView bHint = mkBtn("点悬浮球开关面板", 0xFF1C283C);
         bHint.setTextSize(9);
         bHint.setTextColor(C_DIM);
 
-        View[] rows = new View[]{bClear, bWin, bSp, bInv, bHint};
+        View[] rows = new View[]{bClear, bWin, bSp, bInv, bStar, bHero, bHint};
         for (int i = 0; i < rows.length; i += 2) {
             LinearLayout row = new LinearLayout(app);
             row.setOrientation(LinearLayout.HORIZONTAL);
@@ -602,6 +604,12 @@ public final class Launcher {
                     public void run() { bInv.setBackground(bg(C_BTN, 8)); }
                 }, 300);
             }
+        });
+        bStar.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { Native.starWin(3); }
+        });
+        bHero.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { Native.placeHero("雷神 4"); }
         });
         if (gsp > 1) {
             final int applySp = gsp;
