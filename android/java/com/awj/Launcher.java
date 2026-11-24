@@ -451,120 +451,6 @@ public final class Launcher {
             }
         });
     }
-    static String heroSpec() {
-        return sp.getString("hero_spec", "雷神 4");
-    }
-
-    static void showHeroPicker(final TextView btn) {
-        if (!(panelRootView instanceof FrameLayout)) return;
-        final FrameLayout holder = (FrameLayout) panelRootView;
-        String defs = "雷神 4|强袭 4|洛基 4|妲己 4|死亡骑士 4";
-        String saved = sp.getString("hero_list", "");
-        java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<String>();
-        for (String s : defs.split("\\|")) if (s.trim().length() > 0) set.add(s.trim());
-        for (String s : saved.split("\\|")) { String v = s.trim(); if (v.length() > 0) set.add(v); }
-
-        final LinearLayout ov = new LinearLayout(app);
-        ov.setOrientation(LinearLayout.VERTICAL);
-        ov.setBackground(bg(0xFA16233A, 10));
-        ov.setPadding(dp(8), dp(6), dp(8), dp(6));
-        TextView title = new TextView(app);
-        title.setText("选择上阵英雄");
-        title.setTextColor(C_TEXT);
-        title.setTextSize(11);
-        title.setGravity(Gravity.CENTER);
-        ov.addView(title, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(20)));
-        android.widget.ScrollView sc = new android.widget.ScrollView(app);
-        LinearLayout list = new LinearLayout(app);
-        list.setOrientation(LinearLayout.VERTICAL);
-        sc.addView(list, new android.widget.ScrollView.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        for (final String item : set) {
-            TextView it = mkBtn(item, C_BTN);
-            it.setTextSize(10);
-            LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, dp(28));
-            ilp.topMargin = dp(4);
-            it.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    sp.edit().putString("hero_spec", item).apply();
-                    btn.setText("英雄: " + item + " ▼");
-                    holder.removeView(ov);
-                }
-            });
-            list.addView(it, ilp);
-        }
-        TextView custom = mkBtn("自定义…", C_ON);
-        custom.setTextSize(10);
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(28));
-        clp.topMargin = dp(6);
-        custom.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                holder.removeView(ov);
-                showHeroDialog(btn);
-            }
-        });
-        list.addView(custom, clp);
-        ov.addView(sc, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(150)));
-        holder.addView(ov, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-    }
-    static void showHeroDialog(final TextView btn) {
-        final Activity act2 = topActivity() != null ? topActivity() : curActivity;
-        if (act2 == null || act2.isFinishing()) return;
-        final android.app.Dialog d = new android.app.Dialog(act2, android.R.style.Theme_Translucent_NoTitleBar);
-        LinearLayout p = new LinearLayout(act2);
-        p.setOrientation(LinearLayout.VERTICAL);
-        p.setBackground(bg(0xF216233A, 12));
-        p.setPadding(dp(14), dp(10), dp(14), dp(10));
-        TextView t = new TextView(app);
-        t.setText("英雄名 星级（例：雷神 4）");
-        t.setTextColor(C_TEXT);
-        t.setTextSize(12);
-        p.addView(t);
-        final EditText et = new EditText(act2);
-        et.setSingleLine(true);
-        et.setText(heroSpec());
-        et.setTextColor(C_TEXT);
-        et.setTextSize(13);
-        et.setBackground(bg(0xFF0D1729, 8));
-        p.addView(et, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(38)));
-        LinearLayout row = new LinearLayout(app);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        TextView cancel = mkBtn("取消", C_BTN);
-        TextView ok = mkBtn("保存", C_ON);
-        LinearLayout.LayoutParams l1 = new LinearLayout.LayoutParams(0, dp(36), 1);
-        LinearLayout.LayoutParams l2 = new LinearLayout.LayoutParams(0, dp(36), 1);
-        l2.leftMargin = dp(8);
-        row.addView(cancel, l1);
-        row.addView(ok, l2);
-        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(36));
-        rlp.topMargin = dp(8);
-        p.addView(row, rlp);
-        d.setContentView(p, new ViewGroup.LayoutParams(dp(300), ViewGroup.LayoutParams.WRAP_CONTENT));
-        cancel.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { d.dismiss(); }
-        });
-        ok.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                String spec = et.getText().toString().trim();
-                if (spec.length() == 0) spec = "雷神 4";
-                sp.edit().putString("hero_spec", spec).apply();
-                String list = sp.getString("hero_list", "");
-                if (!("|" + list + "|").contains("|" + spec + "|")) {
-                    list = list.length() == 0 ? spec : list + "|" + spec;
-                    sp.edit().putString("hero_list", list).apply();
-                }
-                btn.setText("英雄: " + spec + " ▼");
-                d.dismiss();
-            }
-        });
-        d.show();
-    }
-
     static TextView mkBtn(String text, int color) {
         TextView t = new TextView(app);
         t.setText(text);
@@ -611,8 +497,9 @@ public final class Launcher {
         final TextView bSp = mkBtn("无限银币", C_BTN);
         final TextView bInv = mkBtn("无敌", C_BTN);
         final TextView bStar = mkBtn("3星通关", C_BTN);
-        final TextView bHeroSel = mkBtn("英雄: " + heroSpec() + " ▼", C_BTN);
-        final TextView bHeroGo = mkBtn("召唤", C_ON);
+        final TextView bH1 = mkBtn("召唤雷神", C_BTN);
+        final TextView bH2 = mkBtn("召唤强袭", C_BTN);
+        final TextView bH3 = mkBtn("召唤妲己", C_BTN);
         final TextView bHint = mkBtn("点悬浮球开关面板", 0xFF1C283C);
         bHint.setTextSize(9);
         bHint.setTextColor(C_DIM);
@@ -646,10 +533,13 @@ public final class Launcher {
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(40));
         hrlp.topMargin = dp(8);
         p.addView(heroRow, hrlp);
-        heroRow.addView(bHeroSel, new LinearLayout.LayoutParams(0, dp(40), 1));
-        LinearLayout.LayoutParams hglp = new LinearLayout.LayoutParams(dp(88), dp(40));
-        hglp.leftMargin = dp(8);
-        heroRow.addView(bHeroGo, hglp);
+        heroRow.addView(bH1, new LinearLayout.LayoutParams(0, dp(40), 1));
+        LinearLayout.LayoutParams h2lp = new LinearLayout.LayoutParams(0, dp(40), 1);
+        h2lp.leftMargin = dp(6);
+        heroRow.addView(bH2, h2lp);
+        LinearLayout.LayoutParams h3lp = new LinearLayout.LayoutParams(0, dp(40), 1);
+        h3lp.leftMargin = dp(6);
+        heroRow.addView(bH3, h3lp);
 
         // 加速（战斗）——文字和滑条同一行
         final int gsp = Math.max(1, Math.min(10, (int) savedSpeed));
@@ -746,11 +636,14 @@ public final class Launcher {
         bStar.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { Native.starWin(3); }
         });
-        bHeroSel.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { showHeroPicker(bHeroSel); }
+        bH1.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { Native.placeHero("雷神 4"); }
         });
-        bHeroGo.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { Native.placeHero(heroSpec()); }
+        bH2.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { Native.placeHero("强袭 4"); }
+        });
+        bH3.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { Native.placeHero("妲己 4"); }
         });
         if (gsp > 1) {
             final int applySp = gsp;
