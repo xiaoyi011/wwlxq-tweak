@@ -36,6 +36,9 @@ static void* (*x_class_get_methods)(void*, void**);
 static const char* (*x_method_get_name)(void*);
 static void* (*x_class_get_fields)(void*, void**);
 static const char* (*x_field_get_name)(void*);
+static size_t (*x_image_get_class_count)(void*);
+static void* (*x_image_get_class)(void*, size_t);
+static const char* (*x_class_get_name)(void*);
 
 static void* g_lib;
 
@@ -68,6 +71,9 @@ static int resolve_api(void) {
     RESOLVE(x_method_get_name, "il2cpp_method_get_name");
     RESOLVE(x_class_get_fields, "il2cpp_class_get_fields");
     RESOLVE(x_field_get_name, "il2cpp_field_get_name");
+    RESOLVE(x_image_get_class_count, "il2cpp_image_get_class_count");
+    RESOLVE(x_image_get_class, "il2cpp_image_get_class");
+    RESOLVE(x_class_get_name, "il2cpp_class_get_name");
     return x_domain_get && x_runtime_invoke && x_class_from_name;
 }
 
@@ -200,6 +206,30 @@ static int resolve_game(void) {
             if (nm) LOGI("GMF %s", nm);
             n++;
         }
+    }
+    if (x_image_get_class_count && x_image_get_class && x_class_get_name) {
+        size_t cc = x_image_get_class_count(g_image);
+        int shown = 0;
+        for (size_t i = 0; i < cc && shown < 40; i++) {
+            void* c = x_image_get_class(g_image, i);
+            if (!c) continue;
+            const char* cn2 = x_class_get_name(c);
+            if (!cn2) continue;
+            if (!strstr(cn2, "Hero") && !strstr(cn2, "Attr")) continue;
+            shown++;
+            LOGI("CLS %s", cn2);
+            if (x_class_get_fields && x_field_get_name) {
+                void* it = NULL;
+                void* f;
+                int n = 0;
+                while ((f = x_class_get_fields(c, &it)) != NULL && n < 8) {
+                    const char* fn = x_field_get_name(f);
+                    if (fn) LOGI("  F %s", fn);
+                    n++;
+                }
+            }
+        }
+        LOGI("classscan shown=%d total=%d", shown, (int)cc);
     }
     LOGI("resolved: kill=%d cheat=%d win=%d lua=%d speed=%d",
          g_m_kill_monster != NULL, g_m_cheat != NULL, g_m_kill_robot != NULL,
