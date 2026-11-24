@@ -106,6 +106,8 @@ static void* g_m_set_sp;
 static void* g_sp_input;
 static void* g_m_change_attr_name;
 static void* g_m_change_attr_slot;
+static void* g_debug_view_field;
+static void* g_m_open_debug;
 static void* g_lua_input_field;
 static void* g_bpvp_field;
 static void* g_m_set_result;
@@ -169,6 +171,14 @@ static int resolve_game(void) {
     g_m_sp = x_class_get_method_from_name(dv, "OnSpClick", 0);
     g_m_inv = x_class_get_method_from_name(dv, "OnSelfInvulnerableStationClick", 0);
     g_m_brute = x_class_get_method_from_name(dv, "OnBruteForceTestClick", 0);
+    {
+        void* bdv = class_of(g_image, "BattleDebugView");
+        if (bdv && mp) {
+            g_debug_view_field = x_class_get_field_from_name(mp, "battleDebugView");
+            g_m_open_debug = x_class_get_method_from_name(bdv, "OnOpenClick", 0);
+        }
+        LOGI("native gm entry: field=%p open=%p", g_debug_view_field, g_m_open_debug);
+    }
     g_m_fastfwd = x_class_get_method_from_name(dv, "OnFastForwardClicked", 0);
     g_ff_input = x_class_get_field_from_name(dv, "fastForwardInput");
     g_m_set_sp = x_class_get_method_from_name(dv, "OnSetSp", 0);
@@ -805,6 +815,25 @@ Java_com_awj_Native_inv(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
     ensure_thread();
     invoke0(g_m_inv, view());
+}
+
+JNIEXPORT void JNICALL
+Java_com_awj_Native_openGm(JNIEnv* env, jclass cls) {
+    (void)env; (void)cls;
+    ensure_thread();
+    if (!g_main_panel_field || !g_debug_view_field || !g_m_open_debug) {
+        LOGE("openGm missing");
+        return;
+    }
+    void* panel = NULL;
+    x_field_static_get_value(g_main_panel_field, &panel);
+    if (!panel) { LOGE("openGm no panel"); return; }
+    void* v = NULL;
+    x_field_get_value(panel, g_debug_view_field, &v);
+    if (!v) { LOGE("openGm no view"); return; }
+    void* exc = NULL;
+    x_runtime_invoke(g_m_open_debug, v, NULL, &exc);
+    LOGI("openGm exc=%p", exc);
 }
 
 JNIEXPORT void JNICALL
