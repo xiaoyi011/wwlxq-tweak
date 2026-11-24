@@ -361,6 +361,7 @@ public final class Launcher {
     }
 
     static View panelView;
+    static View panelRootView;
     static WindowManager.LayoutParams panelLp;
 
     static void togglePanel(final Activity a) {
@@ -378,21 +379,20 @@ public final class Launcher {
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 final int maxH = (int) (app.getResources().getDisplayMetrics().heightPixels * 0.45f);
                 FrameLayout panelRoot = new FrameLayout(act);
+                panelRootView = panelRoot;
                 panelRoot.addView(panelSc, new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, maxH));
                 final View v = panelRoot;
                 wm = (WindowManager) app.getSystemService(Context.WINDOW_SERVICE);
                 panelLp = new WindowManager.LayoutParams(
-                        dp(280), maxH,
+                        dp(260), maxH,
                         WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                                 | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                         android.graphics.PixelFormat.TRANSLUCENT);
-                panelLp.gravity = Gravity.TOP | Gravity.LEFT;
-                final int sw = app.getResources().getDisplayMetrics().widthPixels;
-                final int sh = app.getResources().getDisplayMetrics().heightPixels;
-                panelLp.x = (sw - dp(280)) / 2;
-                panelLp.y = (int) (sh * 0.52f);
+                panelLp.gravity = Gravity.CENTER;
+                panelLp.x = 0;
+                panelLp.y = 0;
                 try {
                     wm.addView(v, panelLp);
                     panelView = v;
@@ -409,6 +409,7 @@ public final class Launcher {
             try { wm.removeView(panelView); } catch (Throwable ignored) {}
         }
         panelView = null;
+        panelRootView = null;
         panelLp = null;
         panel = null;
         if (ball != null) ball.setVisibility(View.VISIBLE);
@@ -455,71 +456,62 @@ public final class Launcher {
     }
 
     static void showHeroPicker(final TextView btn) {
-        final Activity act = topActivity() != null ? topActivity() : curActivity;
-        if (act == null || act.isFinishing()) return;
-        String defs = "强袭 4|洛基 4|妲己 4|死亡骑士 4";
+        if (!(panelRootView instanceof FrameLayout)) return;
+        final FrameLayout holder = (FrameLayout) panelRootView;
+        String defs = "雷神 4|强袭 4|洛基 4|妲己 4|死亡骑士 4";
         String saved = sp.getString("hero_list", "");
         java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<String>();
         for (String s : defs.split("\\|")) if (s.trim().length() > 0) set.add(s.trim());
-        for (String s : saved.split("\\|")) {
-            String v = s.trim();
-            if (v.length() == 0) continue;
-            if (v.equals("雷神 5") || v.equals("剑圣 5") || v.equals("冰女 5")) continue;
-            set.add(v);
-        }
-        final java.util.List<String> items = new java.util.ArrayList<String>(set);
-        final android.app.Dialog d = new android.app.Dialog(act, android.R.style.Theme_Translucent_NoTitleBar);
-        LinearLayout p = new LinearLayout(act);
-        p.setOrientation(LinearLayout.VERTICAL);
-        p.setBackground(bg(0xF216233A, 12));
-        p.setPadding(dp(10), dp(8), dp(10), dp(8));
-        TextView t = new TextView(act);
-        t.setText("选择上阵英雄");
-        t.setTextColor(C_TEXT);
-        t.setTextSize(13);
-        t.setGravity(Gravity.CENTER);
-        p.addView(t, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(24)));
+        for (String s : saved.split("\\|")) { String v = s.trim(); if (v.length() > 0) set.add(v); }
+
+        final LinearLayout ov = new LinearLayout(app);
+        ov.setOrientation(LinearLayout.VERTICAL);
+        ov.setBackground(bg(0xFA16233A, 10));
+        ov.setPadding(dp(8), dp(6), dp(8), dp(6));
+        TextView title = new TextView(app);
+        title.setText("选择上阵英雄");
+        title.setTextColor(C_TEXT);
+        title.setTextSize(11);
+        title.setGravity(Gravity.CENTER);
+        ov.addView(title, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(20)));
         android.widget.ScrollView sc = new android.widget.ScrollView(app);
         LinearLayout list = new LinearLayout(app);
         list.setOrientation(LinearLayout.VERTICAL);
         sc.addView(list, new android.widget.ScrollView.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        for (final String item : items) {
+        for (final String item : set) {
             TextView it = mkBtn(item, C_BTN);
+            it.setTextSize(10);
             LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, dp(30));
-            ilp.topMargin = dp(6);
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(28));
+            ilp.topMargin = dp(4);
             it.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     sp.edit().putString("hero_spec", item).apply();
                     btn.setText("英雄: " + item + " ▼");
-                    d.dismiss();
+                    holder.removeView(ov);
                 }
             });
             list.addView(it, ilp);
         }
         TextView custom = mkBtn("自定义…", C_ON);
+        custom.setTextSize(10);
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(30));
-        clp.topMargin = dp(8);
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(28));
+        clp.topMargin = dp(6);
         custom.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                d.dismiss();
+                holder.removeView(ov);
                 showHeroDialog(btn);
             }
         });
         list.addView(custom, clp);
-        p.addView(sc, new LinearLayout.LayoutParams(
+        ov.addView(sc, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(150)));
-        d.setContentView(p, new ViewGroup.LayoutParams(dp(260), ViewGroup.LayoutParams.WRAP_CONTENT));
-        android.view.Window w = d.getWindow();
-        if (w != null) {
-            w.setGravity(Gravity.BOTTOM);
-            w.setLayout(dp(260), ViewGroup.LayoutParams.WRAP_CONTENT);
-        }
-        d.show();
+        holder.addView(ov, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
     }
-
     static void showHeroDialog(final TextView btn) {
         final Activity act2 = topActivity() != null ? topActivity() : curActivity;
         if (act2 == null || act2.isFinishing()) return;
