@@ -873,7 +873,7 @@ static void dump_cls_fields(void* c, const char* tag) {
 static void probe_names(void* c, const char* tag) {
     if (!c) { LOGI("P6 %s null", tag); return; }
     void* it = NULL; void* m; int n = 0;
-    while ((m = x_class_get_methods && x_class_get_methods(c, &it)) != NULL && n < 260) {
+    while (x_class_get_methods && (m = x_class_get_methods(c, &it)) != NULL && n < 260) {
         const char* nm = x_method_get_name(m);
         uint32_t pc = x_method_get_param_count ? x_method_get_param_count(m) : 0;
         LOGI("P6 %s::%s pc=%u", tag, nm ? nm : "?", pc);
