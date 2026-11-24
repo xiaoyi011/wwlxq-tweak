@@ -509,9 +509,9 @@ public final class Launcher {
         final TextView bH1 = mkBtn("召唤妲己", C_BTN);
         final TextView bH2 = mkBtn("召唤强袭", C_BTN);
         final TextView bH3 = mkBtn("召唤雷神", C_BTN);
-        final TextView bHint = mkBtn("点悬浮球开关面板", 0xFF1C283C);
-        bHint.setTextSize(9);
-        bHint.setTextColor(C_DIM);
+        final TextView bHint = mkBtn("技能无CD", C_BTN);
+        bHint.setTextSize(11);
+        bHint.setTextColor(C_TEXT);
 
         View[] rows = new View[]{bClear, bWin, bSp, bInv, bStar, bHint};
         for (int i = 0; i < rows.length; i += 2) {
@@ -643,6 +643,9 @@ public final class Launcher {
         });
         bStar.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { Native.finishWin(); H.postDelayed(new Runnable() { public void run() { Native.checkResult(); } }, 600); }
+        });
+        bHint.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { Native.skillCd(); }
         });
         bH1.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { Native.placeHero("妲己 4"); }
