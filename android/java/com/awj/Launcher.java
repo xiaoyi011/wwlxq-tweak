@@ -66,6 +66,7 @@ public final class Launcher {
     static volatile boolean autoSp = false;
     static volatile boolean autoInv = false;
     static volatile boolean autoWin = false;
+    static volatile boolean winHighlight = false;
     static volatile boolean autoWinLoopStarted = false;
     static float savedSpeed = 1f;
 
@@ -366,6 +367,7 @@ public final class Launcher {
         H.post(new Runnable() {
             public void run() {
                 if (panelView != null) { closePanel(); return; }
+                if (ball != null) ball.setVisibility(View.GONE);
                 Activity act = topActivity();
                 if (act == null || act.isFinishing()) act = a;
                 if (act == null || act.isFinishing()) return;
@@ -409,6 +411,7 @@ public final class Launcher {
         panelView = null;
         panelLp = null;
         panel = null;
+        if (ball != null) ball.setVisibility(View.VISIBLE);
         if (panelDlg != null) {
             try { panelDlg.dismiss(); } catch (Throwable ignored) {}
             panelDlg = null;
@@ -566,20 +569,25 @@ public final class Launcher {
         });
         bWin.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                
+                winHighlight = !winHighlight;
+                bWin.setBackground(bg(winHighlight ? C_ON : C_BTN, 8));
                 Native.win();
             }
         });
         bSp.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                
-                Native.sp();
+                autoSp = !autoSp;
+                bSp.setBackground(bg(autoSp ? C_ON : C_BTN, 8));
+                bSp.setText(autoSp ? "无限银币：开" : "无限银币");
+                if (autoSp) Native.sp();
             }
         });
         bInv.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                
-                Native.inv();
+                autoInv = !autoInv;
+                bInv.setBackground(bg(autoInv ? C_ON : C_BTN, 8));
+                bInv.setText(autoInv ? "无敌：开" : "无敌");
+                if (autoInv) Native.inv();
             }
         });
         if (gsp > 1) {
@@ -638,8 +646,12 @@ public final class Launcher {
         clearLoopStarted = true;
         H.postDelayed(new Runnable() {
             public void run() {
-                if (licensed && autoClear) {
-                    try { Native.clear(); } catch (Throwable ignored) {}
+                if (licensed) {
+                    try {
+                        if (autoClear) Native.clear();
+                        if (autoSp) Native.sp();
+                        if (autoInv) Native.inv();
+                    } catch (Throwable ignored) {}
                 }
                 H.postDelayed(this, 800);
             }
