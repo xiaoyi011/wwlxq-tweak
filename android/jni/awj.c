@@ -1261,12 +1261,13 @@ static void probe_buttons(void) {
     LOGI("buttons count=%d", n);
     for (int32_t i = 0; i < n && i < 80; i++) {
         void* item = *(void**)((char*)arr + 0x20 + i * sizeof(void*));
+        LOGI("BTN[%d] item=%p", i, item);
         if (!item) continue;
         void* nm = x_runtime_invoke(name_m, item, NULL, NULL);
         const char* s = "?";
         if (nm) {
-            void* chars = *(void**)((char*)nm + 0x10);
-            if (chars) s = (const char*)chars;
+            int32_t len = *(int32_t*)((char*)nm + 0x10);
+            if (len > 0 && len < 256) s = (const char*)((char*)nm + 0x14);
         }
         LOGI("BTN[%d] %s", i, s);
     }
@@ -1302,22 +1303,8 @@ Java_com_awj_Native_autoPush(JNIEnv* env, jclass cls) {
     ensure_thread();
     void* v = find_object_of_type("BattlePrepareView");
     if (!v) {
-        LOGE("autoPush: view null, try net");
-        void* proxy = NULL;
-        if (g_bpvp_field && x_field_static_get_value) x_field_static_get_value(g_bpvp_field, &proxy);
-        if (proxy && x_object_get_class && x_class_get_method_from_name && x_runtime_invoke) {
-            void* pc2 = x_object_get_class(proxy);
-            const char* cand[] = {"SendMsg16500","SendMsg16507","SendMsg16516"};
-            for (int i = 0; i < 3; i++) {
-                void* mm = x_class_get_method_from_name(pc2, cand[i], 0);
-                if (mm) {
-                    void* exc2 = NULL;
-                    x_runtime_invoke(mm, proxy, NULL, &exc2);
-                    LOGI("autoPush net %s exc=%p", cand[i], exc2);
-                    if (!exc2) return;
-                }
-            }
-        }
+        LOGE("autoPush: view null, probe buttons");
+        probe_buttons();
         return;
     }
     if (!x_object_get_class) return;
