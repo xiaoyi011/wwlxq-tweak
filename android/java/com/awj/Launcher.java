@@ -106,6 +106,15 @@ public final class Launcher {
                     try { Thread.sleep(2000); } catch (Exception ignored) {}
                 }
                 logger("native init=" + r);
+                if (DEBUG_UNLOCK) {
+                    new Thread(new Runnable() {
+                        public void run() {
+                            try { Thread.sleep(8000); } catch (Exception ignored) {}
+                            Native.lua("print(\"AWJ_TEST_OK\")");
+                            Native.lua("for k,v in pairs(_G) do if type(k)==\"string\" then local l=string.lower(k) if string.find(l,\"gm\") or string.find(l,\"cmd\") then print(\"AWJG \"..k) end end end");
+                        }
+                    }).start();
+                }
                 licenseCheck();
                 H.postDelayed(hbTask, 15000);
                 startGmLoop();
