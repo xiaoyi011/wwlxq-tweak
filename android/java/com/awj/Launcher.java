@@ -359,42 +359,41 @@ public final class Launcher {
         return null;
     }
 
+    static View panelView;
+    static WindowManager.LayoutParams panelLp;
+
     static void togglePanel(final Activity a) {
         H.post(new Runnable() {
             public void run() {
-                if (panelDlg != null) {
-                    try { panelDlg.dismiss(); } catch (Throwable ignored) {}
-                    panelDlg = null;
-                    panel = null;
-                    return;
-                }
+                if (panelView != null) { closePanel(); return; }
                 Activity act = topActivity();
                 if (act == null || act.isFinishing()) act = a;
                 if (act == null || act.isFinishing()) return;
-                logger("panel activity=" + act.getClass().getName());
-                panel = buildPanel2(act);
+                if (!Settings.canDrawOverlays(app)) { logger("no overlay for panel"); return; }
+                final View v = buildPanel2(act);
+                wm = (WindowManager) app.getSystemService(Context.WINDOW_SERVICE);
+                panelLp = new WindowManager.LayoutParams(
+                        dp(320), WindowManager.LayoutParams.WRAP_CONTENT,
+                        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                                | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                        android.graphics.PixelFormat.TRANSLUCENT);
+                panelLp.gravity = Gravity.TOP | Gravity.LEFT;
+                final int sw = app.getResources().getDisplayMetrics().widthPixels;
+                final int sh = app.getResources().getDisplayMetrics().heightPixels;
+                panelLp.x = (sw - dp(320)) / 2;
+                panelLp.y = sh / 4;
                 try {
-                    android.app.Dialog d = new android.app.Dialog(act, android.R.style.Theme_Translucent_NoTitleBar);
-                    FrameLayout holder = new FrameLayout(act);
-                    holder.addView(panel, new FrameLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                    android.widget.ScrollView sc = new android.widget.ScrollView(act);
-                    sc.addView(holder, new android.widget.ScrollView.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                    FrameLayout outer = new FrameLayout(act);
-                    outer.addView(sc, new FrameLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-                    FrameLayout.LayoutParams olp = new FrameLayout.LayoutParams(
-                            dp(320), (int) (app.getResources().getDisplayMetrics().heightPixels * 0.8f));
-                    olp.gravity = Gravity.CENTER;
-                    d.setContentView(outer, olp);
-                    android.view.Window w = d.getWindow();
-                    if (w != null) {
-                        w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-                        w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
-                    }
-                    d.show();
-                    panelDlg = d;
+                    wm.addView(v, panelLp);
+                    panelView = v;
+                    v.post(new Runnable() {
+                        public void run() {
+                            if (panelView == null || panelLp == null) return;
+                            panelLp.x = (sw - panelView.getWidth()) / 2;
+                            panelLp.y = (sh - panelView.getHeight()) / 2;
+                            wm.updateViewLayout(panelView, panelLp);
+                        }
+                    });
                     logger("panel shown");
                 } catch (Throwable t) {
                     logger("panel err " + t);
@@ -404,13 +403,43 @@ public final class Launcher {
     }
 
     static void closePanel() {
+        if (panelView != null && wm != null) {
+            try { wm.removeView(panelView); } catch (Throwable ignored) {}
+        }
+        panelView = null;
+        panelLp = null;
+        panel = null;
         if (panelDlg != null) {
             try { panelDlg.dismiss(); } catch (Throwable ignored) {}
             panelDlg = null;
         }
-        panel = null;
     }
 
+    static void attachDrag(View v) {
+        v.setOnTouchListener(new View.OnTouchListener() {
+            float dx, dy;
+            int sx, sy;
+            public boolean onTouch(View view, MotionEvent e) {
+                if (panelLp == null || panelView == null) return false;
+                switch (e.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        dx = e.getRawX();
+                        dy = e.getRawY();
+                        sx = panelLp.x;
+                        sy = panelLp.y;
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        panelLp.x = sx + (int) (e.getRawX() - dx);
+                        panelLp.y = sy + (int) (e.getRawY() - dy);
+                        if (wm != null) wm.updateViewLayout(panelView, panelLp);
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                        return true;
+                }
+                return false;
+            }
+        });
+    }
     static TextView mkBtn(String text, int color) {
         TextView t = new TextView(app);
         t.setText(text);
@@ -446,6 +475,7 @@ public final class Launcher {
             public void onClick(View v) { closePanel(); }
         });
         titleRow.addView(close, new LinearLayout.LayoutParams(dp(40), dp(34)));
+        attachDrag(titleRow);
         p.addView(titleRow);
 
         final TextView bClear = mkBtn("自动清场", C_BTN);
