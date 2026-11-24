@@ -410,253 +410,6 @@ public final class Launcher {
         return t;
     }
 
-    static View buildPanel(final Activity a) {
-        final LinearLayout p = new LinearLayout(app);
-        p.setOrientation(LinearLayout.VERTICAL);
-        p.setBackground(bg(0xF216233A, 14));
-        p.setPadding(dp(12), dp(8), dp(12), dp(8));
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(300), ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.gravity = Gravity.CENTER;
-        p.setLayoutParams(lp);
-
-        // 标题行
-        LinearLayout titleRow = new LinearLayout(app);
-        titleRow.setOrientation(LinearLayout.HORIZONTAL);
-        TextView title = new TextView(app);
-        title.setText("小逸");
-        title.setTextColor(C_TEXT);
-        title.setTextSize(18);
-        title.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, dp(34), 1);
-        title.setLayoutParams(tlp);
-        titleRow.addView(title);
-        TextView close = new TextView(app);
-        close.setText("×");
-        close.setTextColor(C_TEXT);
-        close.setTextSize(22);
-        close.setGravity(Gravity.CENTER);
-        close.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { closePanel(); }
-        });
-        titleRow.addView(close, new LinearLayout.LayoutParams(dp(40), dp(34)));
-        p.addView(titleRow);
-
-        // 按钮网格
-        LinearLayout grid = new LinearLayout(app);
-        grid.setOrientation(LinearLayout.VERTICAL);
-        p.addView(grid);
-
-        final TextView bAuto = mkBtn("自动清场", C_BTN);
-        final TextView bWin = mkBtn("PVP直接判胜", C_BTN);
-        final TextView bSp = mkBtn("无限银币", C_BTN);
-        final TextView bInv = mkBtn("无敌", C_BTN);
-        final TextView bStop = mkBtn("停止移动", C_BTN);
-        final TextView bCheat = mkBtn("作弊开关", C_BTN);
-        final TextView bBrute = mkBtn("暴力测试", C_BTN);
-        final TextView bSpSet = mkBtn("SP拉满", C_BTN);
-        final TextView bAutoWin = mkBtn("自动判胜", C_BTN);
-        final TextView bClear = mkBtn("清场", C_BTN);
-        final TextView bHint = mkBtn("点悬浮球开关面板", 0xFF1C283C);
-        bHint.setTextSize(9);
-        bHint.setTextColor(C_DIM);
-
-        View[] rows = new View[]{bAuto, bWin, bSp, bInv, bStop, bCheat, bSpSet, bBrute, bAutoWin, bHint};
-        for (int i = 0; i < rows.length; i += 2) {
-            LinearLayout row = new LinearLayout(app);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            rp.topMargin = dp(8);
-            row.setLayoutParams(rp);
-            View l = rows[i];
-            row.addView(l, new LinearLayout.LayoutParams(0, dp(40), 1));
-            if (i + 1 < rows.length) {
-                View r = rows[i + 1];
-                LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(0, dp(40), 1);
-                rlp.leftMargin = dp(8);
-                row.addView(r, rlp);
-            } else {
-                View spacer = new View(app);
-                LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, dp(40), 1);
-                slp.leftMargin = dp(8);
-                row.addView(spacer, slp);
-            }
-            grid.addView(row);
-        }
-
-        // 清场按钮单独加（放在网格后，作为整行）
-        // 说明：上面 6 个格子已包含“清场”位（bClear 未使用），把 bClear 换成停止移动下方的独立行
-        // 简化：不使用 bClear，保持 6 格布局
-
-        // 全局加速滑条 1-15x
-        final int gsp = Math.max(1, Math.min(10, (int) savedSpeed));
-        p.addView(makeLabel("加速（主线推荐3倍）: " + gsp + "x"));
-        SeekBar speedBar = new SeekBar(app);
-        speedBar.setMax(9);
-        speedBar.setProgress(gsp - 1);
-        final TextView speedLabel = (TextView) p.getChildAt(p.getChildCount() - 1);
-        speedBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            public void onProgressChanged(SeekBar sb, int prog, boolean fromUser) {
-                speedLabel.setText("加速（主线推荐3倍）: " + (prog + 1) + "x");
-            }
-            public void onStartTrackingTouch(SeekBar sb) {}
-            public void onStopTrackingTouch(SeekBar sb) {
-                final float v = sb.getProgress() + 1;
-                savedSpeed = v;
-                sp.edit().putFloat("speed", v).apply();
-                new Thread(new Runnable() {
-                    public void run() { Native.speed(v); }
-                }).start();
-            }
-        });
-        p.addView(speedBar);
-
-        // 快进滑条 0-30 秒
-        p.addView(makeLabel("快进: 0 秒"));
-        final TextView ffLabel = (TextView) p.getChildAt(p.getChildCount() - 1);
-        SeekBar ffBar = new SeekBar(app);
-        ffBar.setMax(30);
-        ffBar.setProgress(0);
-        ffBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            public void onProgressChanged(SeekBar sb, int prog, boolean fromUser) {
-                ffLabel.setText("快进: " + prog + " 秒");
-            }
-            public void onStartTrackingTouch(SeekBar sb) {}
-            public void onStopTrackingTouch(SeekBar sb) {
-                final int sec = sb.getProgress();
-                if (sec <= 0) return;
-                new Thread(new Runnable() {
-                    public void run() { Native.fastForward(sec); }
-                }).start();
-            }
-        });
-        p.addView(ffBar);
-
-        // 怪物血量滑条
-        p.addView(makeLabel("怪物血量: 100%"));
-        final TextView hpLabel = (TextView) p.getChildAt(p.getChildCount() - 1);
-        SeekBar hpBar = new SeekBar(app);
-        hpBar.setMax(99);
-        hpBar.setProgress(99);
-        hpBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            public void onProgressChanged(SeekBar sb, int prog, boolean fromUser) {
-                hpLabel.setText("怪物血量: " + (prog + 1) + "%");
-            }
-            public void onStartTrackingTouch(SeekBar sb) {}
-            public void onStopTrackingTouch(SeekBar sb) {
-                Native.monsterHp(sb.getProgress() + 1);
-            }
-        });
-        p.addView(hpBar);
-
-        // 英雄属性滑条（命令台通道，和 iOS 一致）
-        addAttrSlider(p, "暴击", "暴击");
-        addAttrSlider(p, "爆伤", "爆伤");
-        addAttrSlider(p, "伤害加成", "伤害加成");
-        addAttrSlider(p, "最终攻击力千分比", "最终攻击力千分比");
-        addAttrSlider(p, "物理攻击", "物理攻击");
-        addAttrSlider(p, "攻速", "攻速");
-
-        // 底部：到期 + 解绑
-        LinearLayout foot = new LinearLayout(app);
-        foot.setOrientation(LinearLayout.HORIZONTAL);
-        LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(36));
-        flp.topMargin = dp(10);
-        foot.setLayoutParams(flp);
-        TextView exp = new TextView(app);
-        exp.setText("卡密到期: " + (expireText.length() > 0 ? expireText : "-"));
-        exp.setTextColor(C_DIM);
-        exp.setTextSize(11);
-        exp.setGravity(Gravity.CENTER_VERTICAL);
-        foot.addView(exp, new LinearLayout.LayoutParams(0, dp(36), 1));
-        final TextView unbind = mkBtn(unbindLeft >= 0 ? ("解绑(" + unbindLeft + ")") : "解绑", C_BTN);
-        unbind.setTextSize(10);
-        unbind.setPadding(dp(10), 0, dp(10), 0);
-        unbind.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { doUnbind(unbind); }
-        });
-        foot.addView(unbind, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(28)));
-        p.addView(foot);
-
-        // 事件绑定
-        bAuto.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                autoClear = !autoClear;
-                bAuto.setBackground(bg(autoClear ? C_ON : C_BTN, 8));
-                if (autoClear) {
-                    new Thread(new Runnable() {
-                        public void run() { Native.clear(); }
-                    }).start();
-                }
-            }
-        });
-        bSp.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                autoSp = !autoSp;
-                bSp.setBackground(bg(autoSp ? C_ON : C_BTN, 8));
-                new Thread(new Runnable() {
-                    public void run() { Native.sp(); }
-                }).start();
-            }
-        });
-        bInv.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                autoInv = !autoInv;
-                bInv.setBackground(bg(autoInv ? C_ON : C_BTN, 8));
-                new Thread(new Runnable() {
-                    public void run() { Native.inv(); }
-                }).start();
-            }
-        });
-        bWin.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { Native.win(); }
-        });
-        bStop.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { Native.stopMove(); }
-        });
-        bCheat.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                new Thread(new Runnable() {
-                    public void run() { Native.cheat(); }
-                }).start();
-            }
-        });
-        bBrute.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                new Thread(new Runnable() {
-                    public void run() { Native.brute(); }
-                }).start();
-            }
-        });
-        bSpSet.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                new Thread(new Runnable() {
-                    public void run() { Native.setSp(999999); }
-                }).start();
-            }
-        });
-        bAutoWin.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                autoWin = !autoWin;
-                bAutoWin.setBackground(bg(autoWin ? C_ON : C_BTN, 8));
-            }
-        });
-        bClear.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { Native.clear(); }
-        });
-        // 面板打开时重新应用一次战斗加速
-        if (gsp > 1) {
-            final int applySp = gsp;
-            new Thread(new Runnable() {
-                public void run() { Native.speed(applySp); }
-            }).start();
-        }
-
-        return p;
-    }
-
     // 新版面板（安卓自身能力，8 项功能）
     static View buildPanel2(final Activity a) {
         final LinearLayout p = new LinearLayout(app);
@@ -689,11 +442,12 @@ public final class Launcher {
         final TextView bSpAdd = mkBtn("加 SP", C_BTN);
         final TextView bSpSet = mkBtn("设置 SP 数值", C_BTN);
         final TextView bBrute = mkBtn("暴力测试", C_BTN);
+        final TextView bWall = mkBtn("城墙999999999（我方）", C_BTN);
         final TextView bHint = mkBtn("点悬浮球开关面板", 0xFF1C283C);
         bHint.setTextSize(9);
         bHint.setTextColor(C_DIM);
 
-        View[] rows = new View[]{bClear, bAutoWin, bStop, bSpAdd, bSpSet, bBrute, bHint};
+        View[] rows = new View[]{bClear, bAutoWin, bStop, bSpAdd, bSpSet, bBrute, bWall, bHint};
         for (int i = 0; i < rows.length; i += 2) {
             LinearLayout row = new LinearLayout(app);
             row.setOrientation(LinearLayout.HORIZONTAL);
@@ -814,6 +568,13 @@ public final class Launcher {
             public void onClick(View v) {
                 new Thread(new Runnable() {
                     public void run() { Native.brute(); }
+                }).start();
+            }
+        });
+        bWall.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                new Thread(new Runnable() {
+                    public void run() { Native.wallHp(999999999L); }
                 }).start();
             }
         });
