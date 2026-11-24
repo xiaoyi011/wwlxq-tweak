@@ -493,7 +493,7 @@ static void* auto_thread(void* arg) {
             if (g_spd_saved > 1.01f)
                 run_on_main(^{
                     do_set_timescale(g_spd_saved);
-                    do_set_speed(g_spd_saved > 10.0f ? 10.0f : g_spd_saved);
+                    do_set_speed(g_spd_saved);
                 }); // 记忆的全局加速 + 战斗加速自动生效
         }
         usleep(500000);
@@ -1189,7 +1189,7 @@ static void awj_toggle_panel(void) {
         g_spd_saved = v;
         run_on_main(^{
             do_set_timescale(v);
-            do_set_speed(v > 10.0f ? 10.0f : v);   // 双保险：战斗内也加速
+            do_set_speed(v);   // 双保险：战斗内也加速（1-20x）
         });
     }] forControlEvents:UIControlEventValueChanged];
     [sv addSubview:spdSlider];
