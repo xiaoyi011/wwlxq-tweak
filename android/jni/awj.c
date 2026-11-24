@@ -263,6 +263,14 @@ static int exec_cmd(const char* cmd) {
 // ---------------- JNI ----------------
 static void* g_java_vm;
 
+static __thread int t_attached = 0;
+
+static void ensure_thread(void) {
+    if (t_attached || !g_domain || !x_thread_attach) return;
+    x_thread_attach(g_domain);
+    t_attached = 1;
+}
+
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     g_java_vm = vm;
     return JNI_VERSION_1_6;
@@ -290,6 +298,7 @@ static int unity_ready(void) {
 JNIEXPORT jint JNICALL
 Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
+    ensure_thread();
     static time_t g_ready_at = 0;
     if (!unity_ready()) { g_ready_at = 0; return -3; }
     if (g_ready_at == 0) { g_ready_at = time(NULL); LOGI("unity main seen"); }
@@ -310,54 +319,69 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
 JNIEXPORT jint JNICALL
 Java_com_awj_Native_ready(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
+    ensure_thread();
     return (g_main_panel_field && g_m_kill_monster) ? 1 : 0;
 }
 
 JNIEXPORT void JNICALL
 Java_com_awj_Native_clear(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
+    ensure_thread();
+    static int cnt = 0;
+    cnt++;
+    if (cnt <= 3 || (cnt % 30) == 0) {
+        void* v = view();
+        LOGI("clear #%d view=%p", cnt, v);
+    }
     do_clear();
 }
 
 JNIEXPORT void JNICALL
 Java_com_awj_Native_cheat(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
+    ensure_thread();
     invoke0(g_m_cheat, view());
 }
 
 JNIEXPORT void JNICALL
 Java_com_awj_Native_win(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
+    ensure_thread();
     do_win();
 }
 
 JNIEXPORT void JNICALL
 Java_com_awj_Native_speed(JNIEnv* env, jclass cls, jfloat rate) {
     (void)env; (void)cls;
+    ensure_thread();
     do_speed(rate);
 }
 
 JNIEXPORT void JNICALL
 Java_com_awj_Native_sp(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
+    ensure_thread();
     invoke0(g_m_sp, view());
 }
 
 JNIEXPORT void JNICALL
 Java_com_awj_Native_inv(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
+    ensure_thread();
     invoke0(g_m_inv, view());
 }
 
 JNIEXPORT void JNICALL
 Java_com_awj_Native_stopMove(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
+    ensure_thread();
     exec_cmd("停止怪物移动");
 }
 
 JNIEXPORT void JNICALL
 Java_com_awj_Native_monsterHp(JNIEnv* env, jclass cls, jint pct) {
     (void)env; (void)cls;
+    ensure_thread();
     char cmd[64];
     snprintf(cmd, sizeof(cmd), "设置怪物血量百分比 %d", (int)pct);
     exec_cmd(cmd);
