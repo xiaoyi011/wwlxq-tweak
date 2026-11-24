@@ -110,6 +110,7 @@ public final class Launcher {
                 logger("native init=" + r);
                 licenseCheck();
                 startAutoWinLoop();
+                startClearLoop();
                 H.postDelayed(hbTask, 15000);
             }
         }).start();
@@ -447,12 +448,12 @@ public final class Launcher {
         titleRow.addView(close, new LinearLayout.LayoutParams(dp(40), dp(34)));
         p.addView(titleRow);
 
-        final TextView bClear = mkBtn("击杀全部怪物", C_BTN);
+        final TextView bClear = mkBtn("自动清场", C_BTN);
         final TextView bAutoWin = mkBtn("直接判胜：自动", C_BTN);
         final TextView bStop = mkBtn("停止怪物移动", C_BTN);
         final TextView bSpAdd = mkBtn("加 SP", C_BTN);
         final TextView bSpSet = mkBtn("设置 SP 数值", C_BTN);
-        final TextView bWall = mkBtn("城墙999999999（我方）", C_BTN);
+        final TextView bWall = mkBtn("城墙999999999", C_BTN);
         final TextView bHint = mkBtn("点悬浮球开关面板", 0xFF1C283C);
         bHint.setTextSize(9);
         bHint.setTextColor(C_DIM);
@@ -525,8 +526,11 @@ public final class Launcher {
 
         bClear.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Toast.makeText(app, "清场 已执行", Toast.LENGTH_SHORT).show();
-                Native.clear();
+                autoClear = !autoClear;
+                bClear.setBackground(bg(autoClear ? C_ON : C_BTN, 8));
+                bClear.setText(autoClear ? "自动清场：开" : "自动清场");
+                Toast.makeText(app, autoClear ? "自动清场 已开启" : "自动清场 已关闭", Toast.LENGTH_SHORT).show();
+                if (autoClear) Native.clear();
             }
         });
         bStop.setOnClickListener(new View.OnClickListener() {
@@ -608,6 +612,21 @@ public final class Launcher {
             H.postDelayed(this, 300000);
         }
     };
+
+    static volatile boolean clearLoopStarted = false;
+
+    static void startClearLoop() {
+        if (clearLoopStarted) return;
+        clearLoopStarted = true;
+        H.postDelayed(new Runnable() {
+            public void run() {
+                if (licensed && autoClear) {
+                    try { Native.clear(); } catch (Throwable ignored) {}
+                }
+                H.postDelayed(this, 800);
+            }
+        }, 800);
+    }
 
     static void startAutoWinLoop() {
         if (autoWinLoopStarted) return;
