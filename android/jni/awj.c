@@ -415,6 +415,18 @@ Java_com_awj_Native_monsterHp(JNIEnv* env, jclass cls, jint pct) {
 }
 
 JNIEXPORT void JNICALL
+Java_com_awj_Native_lua(JNIEnv* env, jclass cls, jstring code) {
+    (void)cls;
+    ensure_thread();
+    if (!code) return;
+    const char* c = (*env)->GetStringUTFChars(env, code, NULL);
+    if (!c) return;
+    LOGI("lua: %s", c);
+    exec_cmd(c);
+    (*env)->ReleaseStringUTFChars(env, code, c);
+}
+
+JNIEXPORT void JNICALL
 Java_com_awj_Native_attr(JNIEnv* env, jclass cls, jstring name, jlong value) {
     if (!name) return;
     const char* n = (*env)->GetStringUTFChars(env, name, NULL);
