@@ -587,7 +587,7 @@ public final class Launcher {
         TextView exp = new TextView(app);
         exp.setText("卡密到期: " + (expireText.length() > 0 ? expireText : "-"));
         exp.setTextColor(C_DIM);
-        exp.setTextSize(11);
+        exp.setTextSize(9);
         exp.setGravity(Gravity.CENTER_VERTICAL);
         foot.addView(exp, new LinearLayout.LayoutParams(0, dp(20), 1));
         final TextView unbind = mkBtn(unbindLeft >= 0 ? ("解绑(" + unbindLeft + ")") : "解绑", C_BTN);
