@@ -360,7 +360,7 @@ public final class Launcher {
                 if (act == null || act.isFinishing()) act = a;
                 if (act == null || act.isFinishing()) return;
                 logger("panel activity=" + act.getClass().getName());
-                panel = buildPanel(act);
+                panel = buildPanel2(act);
                 try {
                     android.app.Dialog d = new android.app.Dialog(act, android.R.style.Theme_Translucent_NoTitleBar);
                     FrameLayout holder = new FrameLayout(act);
@@ -654,6 +654,190 @@ public final class Launcher {
             }).start();
         }
 
+        return p;
+    }
+
+    // 新版面板（安卓自身能力，8 项功能）
+    static View buildPanel2(final Activity a) {
+        final LinearLayout p = new LinearLayout(app);
+        p.setOrientation(LinearLayout.VERTICAL);
+        p.setBackground(bg(0xF216233A, 14));
+        p.setPadding(dp(12), dp(8), dp(12), dp(10));
+
+        LinearLayout titleRow = new LinearLayout(app);
+        titleRow.setOrientation(LinearLayout.HORIZONTAL);
+        TextView title = new TextView(app);
+        title.setText("小逸");
+        title.setTextColor(C_TEXT);
+        title.setTextSize(18);
+        title.setGravity(Gravity.CENTER);
+        titleRow.addView(title, new LinearLayout.LayoutParams(0, dp(34), 1));
+        TextView close = new TextView(app);
+        close.setText("×");
+        close.setTextColor(C_TEXT);
+        close.setTextSize(22);
+        close.setGravity(Gravity.CENTER);
+        close.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { closePanel(); }
+        });
+        titleRow.addView(close, new LinearLayout.LayoutParams(dp(40), dp(34)));
+        p.addView(titleRow);
+
+        final TextView bClear = mkBtn("击杀全部怪物", C_BTN);
+        final TextView bAutoWin = mkBtn("直接判胜：自动", C_BTN);
+        final TextView bStop = mkBtn("停止怪物移动", C_BTN);
+        final TextView bCheat = mkBtn("通用作弊开关", C_BTN);
+        final TextView bSpAdd = mkBtn("加 SP", C_BTN);
+        final TextView bSpSet = mkBtn("设置 SP 数值", C_BTN);
+        final TextView bBrute = mkBtn("暴力测试", C_BTN);
+        final TextView bHint = mkBtn("点悬浮球开关面板", 0xFF1C283C);
+        bHint.setTextSize(9);
+        bHint.setTextColor(C_DIM);
+
+        View[] rows = new View[]{bClear, bAutoWin, bStop, bCheat, bSpAdd, bSpSet, bBrute, bHint};
+        for (int i = 0; i < rows.length; i += 2) {
+            LinearLayout row = new LinearLayout(app);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            rp.topMargin = dp(8);
+            row.setLayoutParams(rp);
+            row.addView(rows[i], new LinearLayout.LayoutParams(0, dp(40), 1));
+            if (i + 1 < rows.length) {
+                LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(0, dp(40), 1);
+                rlp.leftMargin = dp(8);
+                row.addView(rows[i + 1], rlp);
+            } else {
+                View sp2 = new View(app);
+                LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, dp(40), 1);
+                slp.leftMargin = dp(8);
+                row.addView(sp2, slp);
+            }
+            p.addView(row);
+        }
+
+        // 加速（战斗）
+        final int gsp = Math.max(1, Math.min(10, (int) savedSpeed));
+        p.addView(makeLabel("加速（主线推荐3倍）: " + gsp + "x"));
+        SeekBar speedBar = new SeekBar(app);
+        speedBar.setMax(9);
+        speedBar.setProgress(gsp - 1);
+        final TextView speedLabel = (TextView) p.getChildAt(p.getChildCount() - 1);
+        speedBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            public void onProgressChanged(SeekBar sb, int prog, boolean fromUser) {
+                speedLabel.setText("加速（主线推荐3倍）: " + (prog + 1) + "x");
+            }
+            public void onStartTrackingTouch(SeekBar sb) {}
+            public void onStopTrackingTouch(SeekBar sb) {
+                final float v = sb.getProgress() + 1;
+                savedSpeed = v;
+                sp.edit().putFloat("speed", v).apply();
+                new Thread(new Runnable() {
+                    public void run() { Native.speed(v); }
+                }).start();
+            }
+        });
+        p.addView(speedBar);
+
+        // 快进
+        p.addView(makeLabel("快进: 0 秒"));
+        final TextView ffLabel = (TextView) p.getChildAt(p.getChildCount() - 1);
+        SeekBar ffBar = new SeekBar(app);
+        ffBar.setMax(30);
+        ffBar.setProgress(0);
+        ffBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            public void onProgressChanged(SeekBar sb, int prog, boolean fromUser) {
+                ffLabel.setText("快进: " + prog + " 秒");
+            }
+            public void onStartTrackingTouch(SeekBar sb) {}
+            public void onStopTrackingTouch(SeekBar sb) {
+                final int sec = sb.getProgress();
+                if (sec <= 0) return;
+                new Thread(new Runnable() {
+                    public void run() { Native.fastForward(sec); }
+                }).start();
+            }
+        });
+        p.addView(ffBar);
+
+        // 底部
+        LinearLayout foot = new LinearLayout(app);
+        foot.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(36));
+        flp.topMargin = dp(10);
+        foot.setLayoutParams(flp);
+        TextView exp = new TextView(app);
+        exp.setText("卡密到期: " + (expireText.length() > 0 ? expireText : "-"));
+        exp.setTextColor(C_DIM);
+        exp.setTextSize(11);
+        exp.setGravity(Gravity.CENTER_VERTICAL);
+        foot.addView(exp, new LinearLayout.LayoutParams(0, dp(36), 1));
+        final TextView unbind = mkBtn(unbindLeft >= 0 ? ("解绑(" + unbindLeft + ")") : "解绑", C_BTN);
+        unbind.setTextSize(10);
+        unbind.setPadding(dp(10), 0, dp(10), 0);
+        unbind.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { doUnbind(unbind); }
+        });
+        foot.addView(unbind, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(28)));
+        p.addView(foot);
+
+        bClear.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                new Thread(new Runnable() {
+                    public void run() { Native.clear(); }
+                }).start();
+            }
+        });
+        bStop.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                new Thread(new Runnable() {
+                    public void run() { Native.stopMove(); }
+                }).start();
+            }
+        });
+        bCheat.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                new Thread(new Runnable() {
+                    public void run() { Native.cheat(); }
+                }).start();
+            }
+        });
+        bSpAdd.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                new Thread(new Runnable() {
+                    public void run() { Native.sp(); }
+                }).start();
+            }
+        });
+        bSpSet.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                new Thread(new Runnable() {
+                    public void run() { Native.setSp(999999); }
+                }).start();
+            }
+        });
+        bBrute.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                new Thread(new Runnable() {
+                    public void run() { Native.brute(); }
+                }).start();
+            }
+        });
+        bAutoWin.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                autoWin = !autoWin;
+                bAutoWin.setBackground(bg(autoWin ? C_ON : C_BTN, 8));
+            }
+        });
+
+        if (gsp > 1) {
+            final int applySp = gsp;
+            new Thread(new Runnable() {
+                public void run() { Native.speed(applySp); }
+            }).start();
+        }
         return p;
     }
 
