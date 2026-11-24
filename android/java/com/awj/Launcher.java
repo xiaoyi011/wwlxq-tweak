@@ -111,6 +111,7 @@ public final class Launcher {
                 logger("native init=" + r);
                 licenseCheck();
                 startAutoWinLoop();
+                startClearLoop();
 
                 H.postDelayed(hbTask, 15000);
             }
@@ -603,11 +604,10 @@ public final class Launcher {
 
         bClear.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Native.clear();
-                bClear.setBackground(bg(C_ON, 8));
-                H.postDelayed(new Runnable() {
-                    public void run() { bClear.setBackground(bg(C_BTN, 8)); }
-                }, 300);
+                autoClear = !autoClear;
+                bClear.setBackground(bg(autoClear ? C_ON : C_BTN, 8));
+                bClear.setText(autoClear ? "自动清场：开" : "自动清场");
+                if (autoClear) Native.clear();
             }
         });
         bWin.setOnClickListener(new View.OnClickListener() {
@@ -619,20 +619,18 @@ public final class Launcher {
         });
         bSp.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Native.sp();
-                bSp.setBackground(bg(C_ON, 8));
-                H.postDelayed(new Runnable() {
-                    public void run() { bSp.setBackground(bg(C_BTN, 8)); }
-                }, 300);
+                autoSp = !autoSp;
+                bSp.setBackground(bg(autoSp ? C_ON : C_BTN, 8));
+                bSp.setText(autoSp ? "无限银币：开" : "无限银币");
+                if (autoSp) Native.sp();
             }
         });
         bInv.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Native.inv();
-                bInv.setBackground(bg(C_ON, 8));
-                H.postDelayed(new Runnable() {
-                    public void run() { bInv.setBackground(bg(C_BTN, 8)); }
-                }, 300);
+                autoInv = !autoInv;
+                bInv.setBackground(bg(autoInv ? C_ON : C_BTN, 8));
+                bInv.setText(autoInv ? "无敌：开" : "无敌");
+                if (autoInv) Native.inv();
             }
         });
         bStar.setOnClickListener(new View.OnClickListener() {
@@ -648,6 +646,9 @@ public final class Launcher {
             public void onClick(View v) { Native.placeHero("雷神 4"); }
         });
         if (winHighlight) bWin.setBackground(bg(C_ON, 8));
+        if (autoClear) { bClear.setBackground(bg(C_ON, 8)); bClear.setText("自动清场：开"); }
+        if (autoSp) { bSp.setBackground(bg(C_ON, 8)); bSp.setText("无限银币：开"); }
+        if (autoInv) { bInv.setBackground(bg(C_ON, 8)); bInv.setText("无敌：开"); }
         if (gsp > 1) {
             final int applySp = gsp;
             Native.speed(applySp);
@@ -708,10 +709,12 @@ public final class Launcher {
                 if (licensed) {
                     tick++;
                     try {
-                        if (autoClear && (tick % 3) == 0) Native.clear();
-                        if (autoSp && (tick % 3) == 1) Native.sp();
-                        if (autoInv && (tick % 3) == 2) Native.inv();
-                        if (savedSpeed > 1f && (tick % 5) == 0) Native.speed(savedSpeed);
+                        if (Native.inBattle() == 1) {
+                            if (autoClear && (tick % 3) == 0) Native.clear();
+                            if (autoSp && (tick % 3) == 1) Native.sp();
+                            if (autoInv && (tick % 3) == 2) Native.inv();
+                            if (savedSpeed > 1f && (tick % 5) == 0) Native.speed(savedSpeed);
+                        }
                     } catch (Throwable ignored) {}
                 }
                 H.postDelayed(this, 1000);
