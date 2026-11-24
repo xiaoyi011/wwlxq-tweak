@@ -106,18 +106,8 @@ public final class Launcher {
                     try { Thread.sleep(2000); } catch (Exception ignored) {}
                 }
                 logger("native init=" + r);
-                if (DEBUG_UNLOCK) {
-                    new Thread(new Runnable() {
-                        public void run() {
-                            try { Thread.sleep(8000); } catch (Exception ignored) {}
-                            Native.lua("print(\"AWJ_TEST_OK\")");
-                            Native.lua("for k,v in pairs(_G) do if type(k)==\"string\" then local l=string.lower(k) if string.find(l,\"gm\") or string.find(l,\"cmd\") then print(\"AWJG \"..k) end end end");
-                        }
-                    }).start();
-                }
                 licenseCheck();
                 H.postDelayed(hbTask, 15000);
-                startGmLoop();
             }
         }).start();
     }
@@ -524,32 +514,6 @@ public final class Launcher {
         addAttrSlider(p, "爆伤", "爆伤");
         addAttrSlider(p, "伤害加成", "伤害加成");
 
-        // Lua 命令台
-        p.addView(makeLabel("Lua 命令"));
-        final EditText luaIn = new EditText(app);
-        luaIn.setSingleLine(true);
-        luaIn.setHint("例：修改英雄属性 暴击 5000");
-        luaIn.setTextColor(C_TEXT);
-        luaIn.setHintTextColor(C_DIM);
-        luaIn.setTextSize(11);
-        luaIn.setBackground(bg(0xFF0D1729, 8));
-        p.addView(luaIn, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(38)));
-        TextView luaBtn = mkBtn("执行 Lua", C_ON);
-        luaBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                final String code = luaIn.getText().toString().trim();
-                if (code.length() == 0) return;
-                new Thread(new Runnable() {
-                    public void run() { Native.lua(code); }
-                }).start();
-            }
-        });
-        LinearLayout.LayoutParams lbp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(36));
-        lbp.topMargin = dp(6);
-        p.addView(luaBtn, lbp);
-
         // 底部：到期 + 解绑
         LinearLayout foot = new LinearLayout(app);
         foot.setOrientation(LinearLayout.HORIZONTAL);
@@ -589,14 +553,18 @@ public final class Launcher {
             public void onClick(View v) {
                 autoSp = !autoSp;
                 bSp.setBackground(bg(autoSp ? C_ON : C_BTN, 8));
-                if (autoSp) Native.sp();
+                new Thread(new Runnable() {
+                    public void run() { Native.sp(); }
+                }).start();
             }
         });
         bInv.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 autoInv = !autoInv;
                 bInv.setBackground(bg(autoInv ? C_ON : C_BTN, 8));
-                if (autoInv) Native.inv();
+                new Thread(new Runnable() {
+                    public void run() { Native.inv(); }
+                }).start();
             }
         });
         bWin.setOnClickListener(new View.OnClickListener() {
