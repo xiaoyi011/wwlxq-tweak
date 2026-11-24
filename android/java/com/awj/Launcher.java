@@ -514,13 +514,27 @@ public final class Launcher {
             p.addView(row);
         }
 
-        // 加速（战斗）
+        // 加速（战斗）——文字和滑条同一行
         final int gsp = Math.max(1, Math.min(10, (int) savedSpeed));
-        p.addView(makeLabel("加速（主线推荐3倍）: " + gsp + "x"));
+        LinearLayout spdRow = new LinearLayout(app);
+        spdRow.setOrientation(LinearLayout.HORIZONTAL);
+        spdRow.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams sprp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(34));
+        sprp.topMargin = dp(6);
+        p.addView(spdRow, sprp);
+        final TextView speedLabel = new TextView(app);
+        speedLabel.setText("加速（主线推荐3倍）: " + gsp + "x");
+        speedLabel.setTextColor(C_DIM);
+        speedLabel.setTextSize(11);
+        spdRow.addView(speedLabel, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT));
         SeekBar speedBar = new SeekBar(app);
         speedBar.setMax(9);
         speedBar.setProgress(gsp - 1);
-        final TextView speedLabel = (TextView) p.getChildAt(p.getChildCount() - 1);
+        LinearLayout.LayoutParams sblp = new LinearLayout.LayoutParams(0, dp(28), 1);
+        sblp.leftMargin = dp(6);
+        spdRow.addView(speedBar, sblp);
         speedBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar sb, int prog, boolean fromUser) {
                 speedLabel.setText("加速（主线推荐3倍）: " + (prog + 1) + "x");
@@ -533,7 +547,6 @@ public final class Launcher {
                 Native.speed(v);
             }
         });
-        p.addView(speedBar);
 
         // 底部
         LinearLayout foot = new LinearLayout(app);
