@@ -505,7 +505,7 @@ public final class Launcher {
         final TextView bWin = mkBtn("PVP直接胜利", C_BTN);
         final TextView bSp = mkBtn("无限银币", C_BTN);
         final TextView bInv = mkBtn("无敌", C_BTN);
-        final TextView bStar = mkBtn("3星通关", C_BTN);
+        final TextView bStar = mkBtn("扩建城墙", C_BTN);
         final TextView bH1 = mkBtn("召唤妲己", C_BTN);
         final TextView bH2 = mkBtn("召唤强袭", C_BTN);
         final TextView bH3 = mkBtn("召唤雷神", C_BTN);
@@ -643,7 +643,7 @@ public final class Launcher {
             }
         });
         bStar.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { Native.finishWin(); H.postDelayed(new Runnable() { public void run() { Native.checkResult(); } }, 600); }
+            public void onClick(View v) { Native.unlockGrid(); }
         });
         bHint.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { Native.skillCd(); }
