@@ -882,6 +882,36 @@ static void probe_names(void* c, const char* tag) {
     LOGI("P6 %s methods=%d", tag, n);
 }
 
+static void probe_attr_api(void) {
+    void* be = class_of(g_image, "BattleBaseEntity");
+    if (be) {
+        void* it = NULL; void* m; int n = 0;
+        while (x_class_get_methods && (m = x_class_get_methods(be, &it)) != NULL && n < 300) {
+            const char* nm = x_method_get_name(m);
+            if (nm && strstr(nm, "Attr")) {
+                uint32_t pc = x_method_get_param_count ? x_method_get_param_count(m) : 0;
+                LOGI("P9M BattleBaseEntity::%s pc=%u", nm, pc);
+                for (uint32_t pi = 0; pi < pc && pi < 5; pi++) {
+                    void* pt = x_method_get_param ? x_method_get_param(m, pi) : NULL;
+                    const char* tn = pt && x_type_get_name ? x_type_get_name(pt) : "?";
+                    LOGI("P9P %s p%u : %s", nm, pi, tn ? tn : "?");
+                }
+                n++;
+            }
+        }
+        LOGI("P9 attr methods=%d", n);
+    }
+    dump_cls_fields(class_of(g_image, "BaseViewExtend"), "BaseViewExtend");
+    if (x_image_get_class_count) {
+        size_t cnt = x_image_get_class_count(g_image);
+        int hits = 0;
+        for (size_t i = 0; i < cnt && hits < 20; i++) {
+            void* c = x_image_get_class(g_image, i);
+            const char* nm = c && x_class_get_name ? x_class_get_name(c) : NULL;
+            if (nm && strstr(nm, "AttrType")) { LOGI("P9C %s", nm); hits++; }
+        }
+    }
+}
 static void probe_static_refs(void) {
     if (!x_image_get_class_count || !x_image_get_class || !x_class_get_fields || !x_field_get_type || !x_type_get_name || !x_field_get_flags) { LOGI("P8 no api"); return; }
     size_t cnt = x_image_get_class_count(g_image);
@@ -1101,6 +1131,7 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
         probe_level_flow();
         probe_entry_scan();
         probe_static_refs();
+        probe_attr_api();
         probe_names(class_of(g_image, "BattleEntityProxy"), "BattleEntityProxy");
         probe_names(class_of(g_image, "BattleEnterCtrl"), "BattleEnterCtrl");
         probe_param_types("BattleBaseEntity");
