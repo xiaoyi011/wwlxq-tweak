@@ -445,6 +445,8 @@ public final class Launcher {
     }
 
     static void showHeroPicker(final TextView btn) {
+        final Activity act = topActivity() != null ? topActivity() : curActivity;
+        if (act == null || act.isFinishing()) return;
         String defs = "雷神 4|强袭 4|洛基 4|妲己 4|死亡骑士 4";
         String saved = sp.getString("hero_list", "");
         java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<String>();
@@ -456,12 +458,12 @@ public final class Launcher {
             set.add(v);
         }
         final java.util.List<String> items = new java.util.ArrayList<String>(set);
-        final android.app.Dialog d = new android.app.Dialog(app, android.R.style.Theme_Translucent_NoTitleBar);
-        LinearLayout p = new LinearLayout(app);
+        final android.app.Dialog d = new android.app.Dialog(act, android.R.style.Theme_Translucent_NoTitleBar);
+        LinearLayout p = new LinearLayout(act);
         p.setOrientation(LinearLayout.VERTICAL);
         p.setBackground(bg(0xF216233A, 12));
         p.setPadding(dp(10), dp(8), dp(10), dp(8));
-        TextView t = new TextView(app);
+        TextView t = new TextView(act);
         t.setText("选择上阵英雄");
         t.setTextColor(C_TEXT);
         t.setTextSize(13);
@@ -480,7 +482,7 @@ public final class Launcher {
             it.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     sp.edit().putString("hero_spec", item).apply();
-                    btn.setText("英雄: " + item);
+                    btn.setText("英雄: " + item + " ▼");
                     d.dismiss();
                 }
             });
@@ -504,8 +506,10 @@ public final class Launcher {
     }
 
     static void showHeroDialog(final TextView btn) {
-        final android.app.Dialog d = new android.app.Dialog(app, android.R.style.Theme_Translucent_NoTitleBar);
-        LinearLayout p = new LinearLayout(app);
+        final Activity act2 = topActivity() != null ? topActivity() : curActivity;
+        if (act2 == null || act2.isFinishing()) return;
+        final android.app.Dialog d = new android.app.Dialog(act2, android.R.style.Theme_Translucent_NoTitleBar);
+        LinearLayout p = new LinearLayout(act2);
         p.setOrientation(LinearLayout.VERTICAL);
         p.setBackground(bg(0xF216233A, 12));
         p.setPadding(dp(14), dp(10), dp(14), dp(10));
@@ -514,7 +518,7 @@ public final class Launcher {
         t.setTextColor(C_TEXT);
         t.setTextSize(12);
         p.addView(t);
-        final EditText et = new EditText(app);
+        final EditText et = new EditText(act2);
         et.setSingleLine(true);
         et.setText(heroSpec());
         et.setTextColor(C_TEXT);
@@ -547,7 +551,7 @@ public final class Launcher {
                     list = list.length() == 0 ? spec : list + "|" + spec;
                     sp.edit().putString("hero_list", list).apply();
                 }
-                btn.setText("英雄: " + spec);
+                btn.setText("英雄: " + spec + " ▼");
                 d.dismiss();
             }
         });
@@ -600,7 +604,7 @@ public final class Launcher {
         final TextView bSp = mkBtn("无限银币", C_BTN);
         final TextView bInv = mkBtn("无敌", C_BTN);
         final TextView bStar = mkBtn("3星通关", C_BTN);
-        final TextView bHeroSel = mkBtn("英雄: " + heroSpec(), C_BTN);
+        final TextView bHeroSel = mkBtn("英雄: " + heroSpec() + " ▼", C_BTN);
         final TextView bHeroGo = mkBtn("召唤", C_ON);
         final TextView bHint = mkBtn("点悬浮球开关面板", 0xFF1C283C);
         bHint.setTextSize(9);
@@ -908,7 +912,7 @@ public final class Launcher {
                 t.setGravity(Gravity.CENTER);
                 d.addView(t, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(32)));
 
-                final EditText et = new EditText(app);
+                final EditText et = new EditText(a);
                 et.setHint("卡密");
                 et.setSingleLine(true);
                 et.setTextColor(C_TEXT);
