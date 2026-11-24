@@ -15,6 +15,8 @@ public final class Native {
     public static native void starWin(int stars);
     public static native void finishWin();
     public static native void checkResult();
+    public static native void probeCompiled();
+    public static native void sendOver();
     public static native void placeHero(String name);
     public static native void win();
     public static native void sp();
