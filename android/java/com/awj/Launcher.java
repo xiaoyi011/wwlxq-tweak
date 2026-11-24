@@ -501,7 +501,7 @@ public final class Launcher {
         p.addView(titleRow, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(18)));
 
-        final TextView bClear = mkBtn("自动清场", C_BTN);
+        final TextView bClear = mkBtn("秒杀", C_BTN);
         final TextView bWin = mkBtn("PVP直接胜利", C_BTN);
         final TextView bSp = mkBtn("无限银币", C_BTN);
         final TextView bInv = mkBtn("无敌", C_BTN);
@@ -611,10 +611,11 @@ public final class Launcher {
 
         bClear.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                autoClear = !autoClear;
-                bClear.setBackground(bg(autoClear ? C_ON : C_BTN, 8));
-                bClear.setText(autoClear ? "自动清场：开" : "自动清场");
-                if (autoClear) Native.clear();
+                Native.clear();
+                bClear.setBackground(bg(C_ON, 8));
+                H.postDelayed(new Runnable() {
+                    public void run() { bClear.setBackground(bg(C_BTN, 8)); }
+                }, 300);
             }
         });
         bWin.setOnClickListener(new View.OnClickListener() {
@@ -653,7 +654,6 @@ public final class Launcher {
             public void onClick(View v) { Native.placeHero("雷神 4"); }
         });
         if (winHighlight) bWin.setBackground(bg(C_ON, 8));
-        if (autoClear) { bClear.setBackground(bg(C_ON, 8)); bClear.setText("自动清场：开"); }
         if (autoSp) { bSp.setBackground(bg(C_ON, 8)); bSp.setText("无限银币：开"); }
         if (autoInv) { bInv.setBackground(bg(C_ON, 8)); bInv.setText("无敌：开"); }
         if (gsp > 1) {
