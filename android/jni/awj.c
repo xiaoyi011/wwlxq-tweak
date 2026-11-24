@@ -102,6 +102,8 @@ static void* g_m_fastfwd;
 static void* g_ff_input;
 static void* g_m_set_sp;
 static void* g_sp_input;
+static void* g_m_change_attr_name;
+static void* g_m_change_attr_slot;
 static void* g_lua_input_field;
 static void* g_bpvp_field;
 static void* g_m_set_result;
@@ -310,7 +312,7 @@ static int resolve_game(void) {
         }
         LOGI("msig hits=%d", mhits);
     }
-    if (x_image_get_class_count && x_image_get_class && x_class_get_name &&
+    if (0 && x_image_get_class_count && x_image_get_class && x_class_get_name &&
         x_class_get_fields && x_field_get_name) {
         size_t cc3 = x_image_get_class_count(g_image);
         for (size_t i = 0; i < cc3; i++) {
@@ -354,6 +356,66 @@ static int resolve_game(void) {
             }
         }
         LOGI("probe done");
+    }
+    {
+        static const char* tnames[] = {"AttrType", "BattleBaseEntity", "BattleHeroEntity",
+                                       "BattleEntityProxy", "BattleProxy", "BattleReduceHpCtrl"};
+        for (int ti = 0; ti < 6; ti++) {
+            void* c = class_of(g_image, tnames[ti]);
+            if (!c) c = x_class_from_name(g_image, "Game.BussinessData", tnames[ti]);
+            if (!c) { LOGI("TGT %s missing", tnames[ti]); continue; }
+            LOGI("TGT %s", tnames[ti]);
+            if (x_class_get_fields && x_field_get_name) {
+                void* it = NULL;
+                void* f;
+                int k = 0;
+                while ((f = x_class_get_fields(c, &it)) != NULL && k < 40) {
+                    const char* fn = x_field_get_name(f);
+                    LOGI("  F %s", fn ? fn : "?");
+                    if (strcmp(tnames[ti], "AttrType") == 0 && fn && x_field_static_get_value) {
+                        int64_t val = 0;
+                        x_field_static_get_value(f, &val);
+                        LOGI("    V %s=%lld", fn, (long long)val);
+                    }
+                    k++;
+                }
+            }
+            if (x_class_get_methods && x_method_get_name) {
+                void* it = NULL;
+                void* m;
+                int k = 0;
+                while ((m = x_class_get_methods(c, &it)) != NULL && k < 60) {
+                    const char* mn = x_method_get_name(m);
+                    if (mn && (strstr(mn, "Attr") || strstr(mn, "Entity") || strstr(mn, "Hero") ||
+                               strstr(mn, "Role") || strstr(mn, "Get") || strstr(mn, "Set")))
+                        LOGI("  M %s", mn);
+                    k++;
+                }
+            }
+        }
+        void* e = class_of(g_image, "BattleBaseEntity");
+        if (e && x_class_get_methods && x_method_get_name && x_method_get_param_count &&
+            x_method_get_param && x_type_get_name) {
+            void* it = NULL;
+            void* m;
+            int found = 0;
+            while ((m = x_class_get_methods(e, &it)) != NULL && found < 6) {
+                const char* mn = x_method_get_name(m);
+                if (!mn || strcmp(mn, "ChangeAttr") != 0) continue;
+                uint32_t pc = x_method_get_param_count(m);
+                if (pc != 3) continue;
+                void* p0 = x_method_get_param(m, 0);
+                void* p2 = x_method_get_param(m, 2);
+                const char* t0 = p0 ? x_type_get_name(p0) : NULL;
+                const char* t2 = p2 ? x_type_get_name(p2) : NULL;
+                LOGI("ChangeAttr sig (%s,?,%s)", t0 ? t0 : "?", t2 ? t2 : "?");
+                if (t0 && strstr(t0, "String") && t2 && strstr(t2, "AttrType")) g_m_change_attr_name = m;
+                if (t0 && strstr(t0, "AttrSlot")) g_m_change_attr_slot = m;
+                found++;
+            }
+            LOGI("changeAttr name=%p slot=%p", g_m_change_attr_name, g_m_change_attr_slot);
+        }
+        LOGI("tgt done");
     }
     LOGI("resolved: kill=%d cheat=%d win=%d lua=%d speed=%d",
          g_m_kill_monster != NULL, g_m_cheat != NULL, g_m_kill_robot != NULL,
