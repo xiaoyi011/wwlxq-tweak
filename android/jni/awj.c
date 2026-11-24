@@ -472,7 +472,7 @@ static int resolve_game(void) {
         }
         LOGI("tgt done");
     }
-    if (x_image_get_class_count && x_image_get_class && x_class_get_name &&
+    if (0 && x_image_get_class_count && x_image_get_class && x_class_get_name &&
         x_class_get_fields && x_field_get_name) {
         size_t cw = x_image_get_class_count(g_image);
         int shown = 0;
@@ -507,7 +507,7 @@ static int resolve_game(void) {
         }
         LOGI("wallscan shown=%d", shown);
     }
-    {
+    if (0) {
         static const char* w2[] = {"EntityData", "BattleRampartStrategyEntity", "BattleRampartEntity"};
         for (int i = 0; i < 3; i++) {
             void* c = class_of(g_image, w2[i]);
