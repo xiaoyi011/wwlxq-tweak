@@ -487,7 +487,7 @@ public final class Launcher {
         for (final String item : items) {
             TextView it = mkBtn(item, C_BTN);
             LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, dp(36));
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(30));
             ilp.topMargin = dp(6);
             it.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
@@ -500,7 +500,7 @@ public final class Launcher {
         }
         TextView custom = mkBtn("自定义…", C_ON);
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(34));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(30));
         clp.topMargin = dp(8);
         custom.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -510,8 +510,13 @@ public final class Launcher {
         });
         list.addView(custom, clp);
         p.addView(sc, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(200)));
-        d.setContentView(p, new ViewGroup.LayoutParams(dp(300), ViewGroup.LayoutParams.WRAP_CONTENT));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(150)));
+        d.setContentView(p, new ViewGroup.LayoutParams(dp(260), ViewGroup.LayoutParams.WRAP_CONTENT));
+        android.view.Window w = d.getWindow();
+        if (w != null) {
+            w.setGravity(Gravity.BOTTOM);
+            w.setLayout(dp(260), ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
         d.show();
     }
 
