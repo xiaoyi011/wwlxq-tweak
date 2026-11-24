@@ -32,6 +32,10 @@ static void* (*x_runtime_invoke)(void*, void*, void**, void**);
 static void* (*x_string_new)(const char*);
 static void* (*x_thread_attach)(void*);
 static void* (*x_domain_assembly_open)(void*, const char*);
+static void* (*x_class_get_methods)(void*, void**);
+static const char* (*x_method_get_name)(void*);
+static void* (*x_class_get_fields)(void*, void**);
+static const char* (*x_field_get_name)(void*);
 
 static void* g_lib;
 
@@ -60,6 +64,10 @@ static int resolve_api(void) {
     RESOLVE(x_string_new, "il2cpp_string_new");
     RESOLVE(x_thread_attach, "il2cpp_thread_attach");
     RESOLVE(x_domain_assembly_open, "il2cpp_domain_assembly_open");
+    RESOLVE(x_class_get_methods, "il2cpp_class_get_methods");
+    RESOLVE(x_method_get_name, "il2cpp_method_get_name");
+    RESOLVE(x_class_get_fields, "il2cpp_class_get_fields");
+    RESOLVE(x_field_get_name, "il2cpp_field_get_name");
     return x_domain_get && x_runtime_invoke && x_class_from_name;
 }
 
@@ -150,6 +158,26 @@ static int resolve_game(void) {
     if (lsc) {
         g_m_set_speed = x_class_get_method_from_name(lsc, "SetSpeedUpRate", 1);
         g_maxframes_field = x_class_get_field_from_name(lsc, "maxLogicFramesPerTick");
+    }
+    if (x_class_get_methods && x_method_get_name) {
+        void* it = NULL;
+        void* m;
+        int n = 0;
+        while ((m = x_class_get_methods(dv, &it)) != NULL && n < 80) {
+            const char* nm = x_method_get_name(m);
+            if (nm) LOGI("GMM %s", nm);
+            n++;
+        }
+    }
+    if (x_class_get_fields && x_field_get_name) {
+        void* it = NULL;
+        void* f;
+        int n = 0;
+        while ((f = x_class_get_fields(dv, &it)) != NULL && n < 60) {
+            const char* nm = x_field_get_name(f);
+            if (nm) LOGI("GMF %s", nm);
+            n++;
+        }
     }
     LOGI("resolved: kill=%d cheat=%d win=%d lua=%d speed=%d",
          g_m_kill_monster != NULL, g_m_cheat != NULL, g_m_kill_robot != NULL,
