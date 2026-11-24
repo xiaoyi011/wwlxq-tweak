@@ -1039,6 +1039,44 @@ Java_com_awj_Native_checkResult(JNIEnv* env, jclass cls) {
     x_runtime_invoke(g_m_check_result, proxy, NULL, &exc);
     LOGI("checkResult proxy=%p exc=%p", proxy, exc);
 }
+JNIEXPORT void JNICALL
+Java_com_awj_Native_probeCompiled(JNIEnv* env, jclass cls) {
+    (void)env; (void)cls;
+    ensure_thread();
+    const char* names[] = {"BattleLockStepCtrl","BattleMainPanel","BattleProxy","BattlePvpProxy",
+                           "BattleResultCtrl","BattleReduceHpCtrl","BattleLogicCtrl","BattleMainView"};
+    for (int i = 0; i < 8; i++) {
+        void* c = class_of(g_image, names[i]);
+        if (!c) { LOGI("PC %s: null", names[i]); continue; }
+        void* it = NULL; void* m; int n = 0, live = 0;
+        while ((m = x_class_get_methods(c, &it)) != NULL && n < 300) {
+            const char* nm = x_method_get_name(m);
+            void* p = x_method_get_pointer ? x_method_get_pointer(m) : NULL;
+            if (p) {
+                LOGI("PC %s::%s ptr=%p", names[i], nm ? nm : "?", p);
+                live++;
+            }
+            n++;
+        }
+        LOGI("PC %s live=%d total=%d", names[i], live, n);
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_com_awj_Native_sendOver(JNIEnv* env, jclass cls) {
+    (void)env; (void)cls;
+    ensure_thread();
+    void* proxy = NULL;
+    if (!g_bpvp_field || !x_runtime_invoke) { LOGE("sendOver: no api"); return; }
+    x_field_static_get_value(g_bpvp_field, &proxy);
+    if (!proxy) { LOGE("sendOver: no proxy"); return; }
+    void* c = x_object_get_class(proxy);
+    void* m = x_class_get_method_from_name(c, "SendOver", 0);
+    if (!m) { LOGE("sendOver: no method"); return; }
+    void* exc = NULL;
+    x_runtime_invoke(m, proxy, NULL, &exc);
+    LOGI("sendOver exc=%p", exc);
+}
 JNIEXPORT jint JNICALL
 Java_com_awj_Native_ready(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
