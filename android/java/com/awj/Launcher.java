@@ -65,6 +65,8 @@ public final class Launcher {
     static volatile boolean autoClear = false;
     static volatile boolean autoSp = false;
     static volatile boolean autoInv = false;
+    static volatile boolean autoWin = false;
+    static volatile boolean autoWinLoopStarted = false;
     static float savedSpeed = 1f;
 
     // ---------------- 初始化 ----------------
@@ -107,6 +109,7 @@ public final class Launcher {
                 }
                 logger("native init=" + r);
                 licenseCheck();
+                startAutoWinLoop();
                 H.postDelayed(hbTask, 15000);
             }
         }).start();
@@ -360,10 +363,19 @@ public final class Launcher {
                 panel = buildPanel(act);
                 try {
                     android.app.Dialog d = new android.app.Dialog(act, android.R.style.Theme_Translucent_NoTitleBar);
-                    FrameLayout holder = new FrameLayout(a);
-                    holder.addView(panel);
-                    d.setContentView(holder, new ViewGroup.LayoutParams(
+                    FrameLayout holder = new FrameLayout(act);
+                    holder.addView(panel, new FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                    android.widget.ScrollView sc = new android.widget.ScrollView(act);
+                    sc.addView(holder, new android.widget.ScrollView.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                    FrameLayout outer = new FrameLayout(act);
+                    outer.addView(sc, new FrameLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                    FrameLayout.LayoutParams olp = new FrameLayout.LayoutParams(
+                            dp(320), (int) (app.getResources().getDisplayMetrics().heightPixels * 0.8f));
+                    olp.gravity = Gravity.CENTER;
+                    d.setContentView(outer, olp);
                     android.view.Window w = d.getWindow();
                     if (w != null) {
                         w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
@@ -441,12 +453,14 @@ public final class Launcher {
         final TextView bStop = mkBtn("停止移动", C_BTN);
         final TextView bCheat = mkBtn("作弊开关", C_BTN);
         final TextView bBrute = mkBtn("暴力测试", C_BTN);
+        final TextView bSpSet = mkBtn("SP拉满", C_BTN);
+        final TextView bAutoWin = mkBtn("自动判胜", C_BTN);
         final TextView bClear = mkBtn("清场", C_BTN);
         final TextView bHint = mkBtn("点悬浮球开关面板", 0xFF1C283C);
         bHint.setTextSize(9);
         bHint.setTextColor(C_DIM);
 
-        View[] rows = new View[]{bAuto, bWin, bSp, bInv, bStop, bCheat, bBrute, bHint};
+        View[] rows = new View[]{bAuto, bWin, bSp, bInv, bStop, bCheat, bSpSet, bBrute, bAutoWin, bHint};
         for (int i = 0; i < rows.length; i += 2) {
             LinearLayout row = new LinearLayout(app);
             row.setOrientation(LinearLayout.HORIZONTAL);
@@ -476,14 +490,14 @@ public final class Launcher {
 
         // 全局加速滑条 1-15x
         final int gsp = Math.max(1, Math.min(10, (int) savedSpeed));
-        p.addView(makeLabel("加速: " + gsp + "x"));
+        p.addView(makeLabel("加速（主线推荐3倍）: " + gsp + "x"));
         SeekBar speedBar = new SeekBar(app);
         speedBar.setMax(9);
         speedBar.setProgress(gsp - 1);
         final TextView speedLabel = (TextView) p.getChildAt(p.getChildCount() - 1);
         speedBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar sb, int prog, boolean fromUser) {
-                speedLabel.setText("加速: " + (prog + 1) + "x");
+                speedLabel.setText("加速（主线推荐3倍）: " + (prog + 1) + "x");
             }
             public void onStartTrackingTouch(SeekBar sb) {}
             public void onStopTrackingTouch(SeekBar sb) {
@@ -496,6 +510,27 @@ public final class Launcher {
             }
         });
         p.addView(speedBar);
+
+        // 快进滑条 0-30 秒
+        p.addView(makeLabel("快进: 0 秒"));
+        final TextView ffLabel = (TextView) p.getChildAt(p.getChildCount() - 1);
+        SeekBar ffBar = new SeekBar(app);
+        ffBar.setMax(30);
+        ffBar.setProgress(0);
+        ffBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            public void onProgressChanged(SeekBar sb, int prog, boolean fromUser) {
+                ffLabel.setText("快进: " + prog + " 秒");
+            }
+            public void onStartTrackingTouch(SeekBar sb) {}
+            public void onStopTrackingTouch(SeekBar sb) {
+                final int sec = sb.getProgress();
+                if (sec <= 0) return;
+                new Thread(new Runnable() {
+                    public void run() { Native.fastForward(sec); }
+                }).start();
+            }
+        });
+        p.addView(ffBar);
 
         // 怪物血量滑条
         p.addView(makeLabel("怪物血量: 100%"));
@@ -518,6 +553,9 @@ public final class Launcher {
         addAttrSlider(p, "暴击", "暴击");
         addAttrSlider(p, "爆伤", "爆伤");
         addAttrSlider(p, "伤害加成", "伤害加成");
+        addAttrSlider(p, "最终攻击力千分比", "最终攻击力千分比");
+        addAttrSlider(p, "物理攻击", "物理攻击");
+        addAttrSlider(p, "攻速", "攻速");
 
         // 底部：到期 + 解绑
         LinearLayout foot = new LinearLayout(app);
@@ -592,6 +630,19 @@ public final class Launcher {
                 }).start();
             }
         });
+        bSpSet.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                new Thread(new Runnable() {
+                    public void run() { Native.setSp(999999); }
+                }).start();
+            }
+        });
+        bAutoWin.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                autoWin = !autoWin;
+                bAutoWin.setBackground(bg(autoWin ? C_ON : C_BTN, 8));
+            }
+        });
         bClear.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { Native.clear(); }
         });
@@ -647,6 +698,21 @@ public final class Launcher {
             H.postDelayed(this, 300000);
         }
     };
+
+    static void startAutoWinLoop() {
+        if (autoWinLoopStarted) return;
+        autoWinLoopStarted = true;
+        new Thread(new Runnable() {
+            public void run() {
+                while (true) {
+                    try { Thread.sleep(3000); } catch (Exception ignored) {}
+                    if (licensed && autoWin) {
+                        try { Native.win(); } catch (Throwable ignored) {}
+                    }
+                }
+            }
+        }).start();
+    }
 
     static volatile boolean gmLoopStarted = false;
 
