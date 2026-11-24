@@ -109,6 +109,8 @@ static void* g_m_change_attr_slot;
 static void* g_debug_view_field;
 static void* g_m_open_debug;
 static void* g_f_is_battle;
+static void* g_m_place_hero;
+static void* g_hero_input;
 static void* g_lua_input_field;
 static void* g_bpvp_field;
 static void* g_m_set_result;
@@ -187,6 +189,8 @@ static int resolve_game(void) {
         LOGI("isBattle field=%p", g_f_is_battle);
     }
     g_m_fastfwd = x_class_get_method_from_name(dv, "OnFastForwardClicked", 0);
+    g_m_place_hero = x_class_get_method_from_name(dv, "OnPlaceHeroClick", 0);
+    g_hero_input = x_class_get_field_from_name(dv, "placeHeroInput");
     g_ff_input = x_class_get_field_from_name(dv, "fastForwardInput");
     g_m_set_sp = x_class_get_method_from_name(dv, "OnSetSp", 0);
     g_sp_input = x_class_get_field_from_name(dv, "setSpInput");
@@ -934,6 +938,46 @@ Java_com_awj_Native_inv(JNIEnv* env, jclass cls) {
     (void)env; (void)cls;
     ensure_thread();
     invoke0(g_m_inv, view());
+}
+
+JNIEXPORT void JNICALL
+Java_com_awj_Native_starWin(JNIEnv* env, jclass cls, jint stars) {
+    (void)env; (void)cls;
+    ensure_thread();
+    if (!g_m_kill_robot) { LOGE("starWin missing"); return; }
+    int32_t s = (int32_t)stars;
+    void* params[1] = { &s };
+    void* exc = NULL;
+    x_runtime_invoke(g_m_kill_robot, view(), params, &exc);
+    LOGI("starWin %d exc=%p", (int)stars, exc);
+}
+
+JNIEXPORT void JNICALL
+Java_com_awj_Native_placeHero(JNIEnv* env, jclass cls, jstring name) {
+    (void)env; (void)cls;
+    ensure_thread();
+    void* v = view();
+    if (!v || !g_m_place_hero || !g_hero_input || !x_string_new) { LOGE("placeHero missing"); return; }
+    void* inp = NULL;
+    x_field_get_value(v, g_hero_input, &inp);
+    if (!inp) { LOGE("placeHero no input"); return; }
+    const char* txt = "雷神 4";
+    const char* n = NULL;
+    if (name) {
+        n = (*env)->GetStringUTFChars(env, name, NULL);
+        if (n) txt = n;
+    }
+    void* c2 = x_object_get_class(inp);
+    void* setter = c2 ? x_class_get_method_from_name(c2, "set_text", 1) : NULL;
+    if (!setter) { LOGE("placeHero no setter"); if (n) (*env)->ReleaseStringUTFChars(env, name, n); return; }
+    void* params[1] = { x_string_new(txt) };
+    void* exc = NULL;
+    x_runtime_invoke(setter, inp, params, &exc);
+    if (n) (*env)->ReleaseStringUTFChars(env, name, n);
+    if (exc) { LOGE("placeHero set exc"); return; }
+    exc = NULL;
+    x_runtime_invoke(g_m_place_hero, v, NULL, &exc);
+    LOGI("placeHero exc=%p", exc);
 }
 
 JNIEXPORT void JNICALL
