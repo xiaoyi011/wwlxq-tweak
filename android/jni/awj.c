@@ -207,29 +207,42 @@ static int resolve_game(void) {
             n++;
         }
     }
-    if (x_image_get_class_count && x_image_get_class && x_class_get_name) {
+    if (x_image_get_class_count && x_image_get_class && x_class_get_name &&
+        x_class_get_fields && x_field_get_name) {
+        static const char* keys[] = {"crit", "Crit", "attack", "Attack", "atk", "Atk",
+                                     "hp", "Hp", "def", "Def", "speed", "Speed"};
         size_t cc = x_image_get_class_count(g_image);
-        int shown = 0;
-        for (size_t i = 0; i < cc && shown < 40; i++) {
+        int found = 0;
+        for (size_t i = 0; i < cc && found < 30; i++) {
             void* c = x_image_get_class(g_image, i);
             if (!c) continue;
             const char* cn2 = x_class_get_name(c);
             if (!cn2) continue;
-            if (!strstr(cn2, "Hero") && !strstr(cn2, "Attr")) continue;
-            shown++;
-            LOGI("CLS %s", cn2);
-            if (x_class_get_fields && x_field_get_name) {
-                void* it = NULL;
-                void* f;
-                int n = 0;
-                while ((f = x_class_get_fields(c, &it)) != NULL && n < 8) {
-                    const char* fn = x_field_get_name(f);
-                    if (fn) LOGI("  F %s", fn);
-                    n++;
+            int hits = 0;
+            void* it = NULL;
+            void* f;
+            while ((f = x_class_get_fields(c, &it)) != NULL) {
+                const char* fn = x_field_get_name(f);
+                if (!fn) continue;
+                for (int k = 0; k < 12; k++) {
+                    if (strstr(fn, keys[k])) { hits++; break; }
                 }
             }
+            if (hits < 2) continue;
+            found++;
+            LOGI("ATTRCLS %s hits=%d", cn2, hits);
+            it = NULL;
+            int n = 0;
+            while ((f = x_class_get_fields(c, &it)) != NULL && n < 24) {
+                const char* fn = x_field_get_name(f);
+                if (!fn) continue;
+                for (int k = 0; k < 12; k++) {
+                    if (strstr(fn, keys[k])) { LOGI("   %s", fn); break; }
+                }
+                n++;
+            }
         }
-        LOGI("classscan shown=%d total=%d", shown, (int)cc);
+        LOGI("attrscan found=%d total=%d", found, (int)cc);
     }
     LOGI("resolved: kill=%d cheat=%d win=%d lua=%d speed=%d",
          g_m_kill_monster != NULL, g_m_cheat != NULL, g_m_kill_robot != NULL,
