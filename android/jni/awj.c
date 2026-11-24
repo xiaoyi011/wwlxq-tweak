@@ -269,7 +269,7 @@ static void do_win(void) {
 
 static void do_speed(float rate) {
     if (rate < 1) rate = 1;
-    if (rate > 10) rate = 10;
+    if (rate > 20) rate = 20;
     if (!g_ls_field || !g_m_set_speed) return;
     void* ls = NULL;
     x_field_static_get_value(g_ls_field, &ls);
