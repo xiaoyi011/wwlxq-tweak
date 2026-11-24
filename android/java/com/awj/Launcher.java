@@ -440,6 +440,56 @@ public final class Launcher {
             }
         });
     }
+    static String heroSpec() {
+        return sp.getString("hero_spec", "雷神 4");
+    }
+
+    static void showHeroDialog(final TextView btn) {
+        final android.app.Dialog d = new android.app.Dialog(app, android.R.style.Theme_Translucent_NoTitleBar);
+        LinearLayout p = new LinearLayout(app);
+        p.setOrientation(LinearLayout.VERTICAL);
+        p.setBackground(bg(0xF216233A, 12));
+        p.setPadding(dp(14), dp(10), dp(14), dp(10));
+        TextView t = new TextView(app);
+        t.setText("英雄名 星级（例：雷神 4）");
+        t.setTextColor(C_TEXT);
+        t.setTextSize(12);
+        p.addView(t);
+        final EditText et = new EditText(app);
+        et.setSingleLine(true);
+        et.setText(heroSpec());
+        et.setTextColor(C_TEXT);
+        et.setTextSize(13);
+        et.setBackground(bg(0xFF0D1729, 8));
+        p.addView(et, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(38)));
+        LinearLayout row = new LinearLayout(app);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        TextView cancel = mkBtn("取消", C_BTN);
+        TextView ok = mkBtn("保存", C_ON);
+        LinearLayout.LayoutParams l1 = new LinearLayout.LayoutParams(0, dp(36), 1);
+        LinearLayout.LayoutParams l2 = new LinearLayout.LayoutParams(0, dp(36), 1);
+        l2.leftMargin = dp(8);
+        row.addView(cancel, l1);
+        row.addView(ok, l2);
+        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(36));
+        rlp.topMargin = dp(8);
+        p.addView(row, rlp);
+        d.setContentView(p, new ViewGroup.LayoutParams(dp(300), ViewGroup.LayoutParams.WRAP_CONTENT));
+        cancel.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { d.dismiss(); }
+        });
+        ok.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                String spec = et.getText().toString().trim();
+                if (spec.length() == 0) spec = "雷神 4";
+                sp.edit().putString("hero_spec", spec).apply();
+                btn.setText("上阵 " + spec);
+                d.dismiss();
+            }
+        });
+        d.show();
+    }
+
     static TextView mkBtn(String text, int color) {
         TextView t = new TextView(app);
         t.setText(text);
@@ -486,7 +536,7 @@ public final class Launcher {
         final TextView bSp = mkBtn("无限银币", C_BTN);
         final TextView bInv = mkBtn("无敌", C_BTN);
         final TextView bStar = mkBtn("3星通关", C_BTN);
-        final TextView bHero = mkBtn("上阵雷神4", C_BTN);
+        final TextView bHero = mkBtn("上阵 " + heroSpec(), C_BTN);
         final TextView bHint = mkBtn("点悬浮球开关面板", 0xFF1C283C);
         bHint.setTextSize(9);
         bHint.setTextColor(C_DIM);
@@ -609,7 +659,13 @@ public final class Launcher {
             public void onClick(View v) { Native.starWin(3); }
         });
         bHero.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { Native.placeHero("雷神 4"); }
+            public void onClick(View v) { Native.placeHero(heroSpec()); }
+        });
+        bHero.setOnLongClickListener(new View.OnLongClickListener() {
+            public boolean onLongClick(View v) {
+                showHeroDialog(bHero);
+                return true;
+            }
         });
         if (gsp > 1) {
             final int applySp = gsp;
