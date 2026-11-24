@@ -656,17 +656,20 @@ public final class Launcher {
         if (clearLoopStarted) return;
         clearLoopStarted = true;
         H.postDelayed(new Runnable() {
+            int tick = 0;
             public void run() {
                 if (licensed) {
+                    tick++;
                     try {
-                        if (autoClear) Native.clear();
-                        if (autoSp) Native.sp();
-                        if (autoInv) Native.inv();
+                        // 分时轮转，避免同一帧连续调用重逻辑导致卡死
+                        if (autoClear && (tick % 3) == 0) Native.clear();
+                        if (autoSp && (tick % 3) == 1) Native.sp();
+                        if (autoInv && (tick % 3) == 2) Native.inv();
                     } catch (Throwable ignored) {}
                 }
-                H.postDelayed(this, 800);
+                H.postDelayed(this, 1000);
             }
-        }, 800);
+        }, 1000);
     }
 
     static void startAutoWinLoop() {
