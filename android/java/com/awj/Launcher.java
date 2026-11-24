@@ -445,11 +445,16 @@ public final class Launcher {
     }
 
     static void showHeroPicker(final TextView btn) {
-        String defs = "雷神 4|雷神 5|剑圣 5|冰女 5|强袭 4|洛基 4|妲己 4|死亡骑士 4";
+        String defs = "雷神 4|强袭 4|洛基 4|妲己 4|死亡骑士 4";
         String saved = sp.getString("hero_list", "");
         java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<String>();
         for (String s : defs.split("\\|")) if (s.trim().length() > 0) set.add(s.trim());
-        for (String s : saved.split("\\|")) if (s.trim().length() > 0) set.add(s.trim());
+        for (String s : saved.split("\\|")) {
+            String v = s.trim();
+            if (v.length() == 0) continue;
+            if (v.equals("雷神 5") || v.equals("剑圣 5") || v.equals("冰女 5")) continue;
+            set.add(v);
+        }
         final java.util.List<String> items = new java.util.ArrayList<String>(set);
         final android.app.Dialog d = new android.app.Dialog(app, android.R.style.Theme_Translucent_NoTitleBar);
         LinearLayout p = new LinearLayout(app);
