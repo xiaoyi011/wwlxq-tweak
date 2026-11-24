@@ -882,6 +882,30 @@ static void probe_names(void* c, const char* tag) {
     LOGI("P6 %s methods=%d", tag, n);
 }
 
+static void probe_static_refs(void) {
+    if (!x_image_get_class_count || !x_image_get_class || !x_class_get_fields || !x_field_get_type || !x_type_get_name || !x_field_get_flags) { LOGI("P8 no api"); return; }
+    size_t cnt = x_image_get_class_count(g_image);
+    int hits = 0;
+    for (size_t i = 0; i < cnt && hits < 60; i++) {
+        void* c = x_image_get_class(g_image, i);
+        if (!c) continue;
+        void* it = NULL; void* f;
+        while ((f = x_class_get_fields(c, &it)) != NULL) {
+            if ((x_field_get_flags(f) & 0x10) == 0) continue;
+            void* ft = x_field_get_type(f);
+            if (!ft) continue;
+            const char* tn = x_type_get_name(ft);
+            if (!tn) continue;
+            if (strstr(tn, "BattlePrepareView") || strstr(tn, "BattleEntityProxy") || strstr(tn, "BattleReduceHpCtrl") || strstr(tn, "BattleEnterCtrl")) {
+                const char* cn = x_class_get_name(c);
+                const char* fn = x_field_get_name(f);
+                LOGI("P8 %s::%s : %s", cn ? cn : "?", fn ? fn : "?", tn);
+                hits++;
+            }
+        }
+    }
+    LOGI("P8 hits=%d", hits);
+}
 static void probe_entry_scan(void) {
     if (!x_image_get_class_count || !x_image_get_class || !x_class_get_name || !x_class_get_methods) { LOGI("P7 no api"); return; }
     size_t cnt = x_image_get_class_count(g_image);
@@ -1076,6 +1100,7 @@ Java_com_awj_Native_init(JNIEnv* env, jclass cls) {
         probe_result_type();
         probe_level_flow();
         probe_entry_scan();
+        probe_static_refs();
         dump_cls_fields(class_of(g_image, "BattleDefine"), "BattleDefine");
         dump_cls_fields(class_of(g_image, "BattlePrepareView"), "BattlePrepareView");
         dump_cls_fields(class_of(g_image, "BattleEnterCtrl"), "BattleEnterCtrl");
