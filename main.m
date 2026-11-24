@@ -287,12 +287,20 @@ static int resolve_game(void) {
     LOG("speed api: ls=%d m=%d rate=%d max=%d", g_ls_field != NULL,
         g_m_set_speed != NULL, g_speed_field != NULL, g_maxframes_field != NULL);
 
+    void* tcls = NULL;
     void* core_img = find_image_exact("UnityEngine.CoreModule.dll");
-    if (core_img) {
-        void* tcls = x_class_from_name(core_img, "UnityEngine", "Time");
-        if (tcls) g_m_set_timescale = x_class_get_method_from_name(tcls, "set_timeScale", 1);
+    if (core_img) tcls = x_class_from_name(core_img, "UnityEngine", "Time");
+    if (!tcls) {
+        void* d0 = x_domain_get();
+        size_t n0 = 0;
+        void** asms0 = d0 ? x_domain_get_assemblies(d0, &n0) : NULL;
+        for (size_t i = 0; asms0 && i < n0 && !tcls; i++) {
+            void* img = x_assembly_get_image(asms0[i]);
+            if (img) tcls = x_class_from_name(img, "UnityEngine", "Time");
+        }
     }
-    LOG("timescale api: %d", g_m_set_timescale != NULL);
+    if (tcls) g_m_set_timescale = x_class_get_method_from_name(tcls, "set_timeScale", 1);
+    LOG("timescale api: cls=%d setter=%d", tcls != NULL, g_m_set_timescale != NULL);
 
     void* blp = class_of(g_image, "BattleLevelProxy");
     if (bve) g_level_field = x_class_get_field_from_name(bve, "battleLevelProxy");
@@ -483,7 +491,10 @@ static void* auto_thread(void* arg) {
         if (tick % 4 == 0) {                         // 每 2 秒
             if (g_t_inv) run_on_main(^{ gm_call2(1, 1); });   // 无敌
             if (g_spd_saved > 1.01f)
-                run_on_main(^{ do_set_timescale(g_spd_saved); }); // 记忆的全局加速自动生效
+                run_on_main(^{
+                    do_set_timescale(g_spd_saved);
+                    do_set_speed(g_spd_saved > 10.0f ? 10.0f : g_spd_saved);
+                }); // 记忆的全局加速 + 战斗加速自动生效
         }
         usleep(500000);
     }
@@ -1176,7 +1187,10 @@ static void awj_toggle_panel(void) {
         spdLabel.text = [NSString stringWithFormat:@"全局加速: %.0fx", v];
         [[NSUserDefaults standardUserDefaults] setFloat:v forKey:@"awj_tspeed"];
         g_spd_saved = v;
-        run_on_main(^{ do_set_timescale(v); });
+        run_on_main(^{
+            do_set_timescale(v);
+            do_set_speed(v > 10.0f ? 10.0f : v);   // 双保险：战斗内也加速
+        });
     }] forControlEvents:UIControlEventValueChanged];
     [sv addSubview:spdSlider];
 
