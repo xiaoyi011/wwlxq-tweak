@@ -380,22 +380,12 @@ public final class Launcher {
                         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                                 | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                         android.graphics.PixelFormat.TRANSLUCENT);
-                panelLp.gravity = Gravity.TOP | Gravity.LEFT;
-                final int sw = app.getResources().getDisplayMetrics().widthPixels;
-                final int sh = app.getResources().getDisplayMetrics().heightPixels;
-                panelLp.x = (sw - dp(320)) / 2;
-                panelLp.y = sh / 4;
+                panelLp.gravity = Gravity.CENTER;
+                panelLp.x = 0;
+                panelLp.y = 0;
                 try {
                     wm.addView(v, panelLp);
                     panelView = v;
-                    v.post(new Runnable() {
-                        public void run() {
-                            if (panelView == null || panelLp == null) return;
-                            panelLp.x = (sw - panelView.getWidth()) / 2;
-                            panelLp.y = (sh - panelView.getHeight()) / 2;
-                            wm.updateViewLayout(panelView, panelLp);
-                        }
-                    });
                     logger("panel shown");
                 } catch (Throwable t) {
                     logger("panel err " + t);
@@ -425,12 +415,19 @@ public final class Launcher {
             public boolean onTouch(View view, MotionEvent e) {
                 if (panelLp == null || panelView == null) return false;
                 switch (e.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
+                    case MotionEvent.ACTION_DOWN: {
+                        int[] loc = new int[2];
+                        panelView.getLocationOnScreen(loc);
+                        panelLp.gravity = Gravity.TOP | Gravity.LEFT;
+                        panelLp.x = loc[0];
+                        panelLp.y = loc[1];
+                        if (wm != null) wm.updateViewLayout(panelView, panelLp);
                         dx = e.getRawX();
                         dy = e.getRawY();
                         sx = panelLp.x;
                         sy = panelLp.y;
                         return true;
+                    }
                     case MotionEvent.ACTION_MOVE:
                         panelLp.x = sx + (int) (e.getRawX() - dx);
                         panelLp.y = sy + (int) (e.getRawY() - dy);
@@ -532,8 +529,9 @@ public final class Launcher {
         SeekBar speedBar = new SeekBar(app);
         speedBar.setMax(9);
         speedBar.setProgress(gsp - 1);
-        LinearLayout.LayoutParams sblp = new LinearLayout.LayoutParams(0, dp(28), 1);
+        LinearLayout.LayoutParams sblp = new LinearLayout.LayoutParams(0, dp(32), 1);
         sblp.leftMargin = dp(6);
+        sblp.gravity = Gravity.CENTER_VERTICAL;
         spdRow.addView(speedBar, sblp);
         speedBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar sb, int prog, boolean fromUser) {
