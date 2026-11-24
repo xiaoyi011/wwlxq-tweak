@@ -43,6 +43,7 @@ static void* (*x_field_get_type)(void*);
 static const char* (*x_type_get_name)(void*);
 static uint32_t (*x_method_get_param_count)(void*);
 static void* (*x_method_get_param)(void*, uint32_t);
+static void* (*x_class_from_type)(void*);
 
 static void* g_lib;
 
@@ -82,6 +83,7 @@ static int resolve_api(void) {
     RESOLVE(x_type_get_name, "il2cpp_type_get_name");
     RESOLVE(x_method_get_param_count, "il2cpp_method_get_param_count");
     RESOLVE(x_method_get_param, "il2cpp_method_get_param");
+    RESOLVE(x_class_from_type, "il2cpp_class_from_type");
     return x_domain_get && x_runtime_invoke && x_class_from_name;
 }
 
@@ -359,8 +361,9 @@ static int resolve_game(void) {
     }
     {
         static const char* tnames[] = {"AttrType", "BattleBaseEntity", "BattleHeroEntity",
-                                       "BattleEntityProxy", "BattleProxy", "BattleReduceHpCtrl"};
-        for (int ti = 0; ti < 6; ti++) {
+                                       "BattleEntityProxy", "BattleProxy", "BattleReduceHpCtrl",
+                                       "BattleMainPanel"};
+        for (int ti = 0; ti < 7; ti++) {
             void* c = class_of(g_image, tnames[ti]);
             if (!c) c = x_class_from_name(g_image, "Game.BussinessData", tnames[ti]);
             if (!c) { LOGI("TGT %s missing", tnames[ti]); continue; }
@@ -409,11 +412,53 @@ static int resolve_game(void) {
                 const char* t0 = p0 ? x_type_get_name(p0) : NULL;
                 const char* t2 = p2 ? x_type_get_name(p2) : NULL;
                 LOGI("ChangeAttr sig (%s,?,%s)", t0 ? t0 : "?", t2 ? t2 : "?");
+                if (t2 && strstr(t2, "AttrType") && x_class_from_type && x_field_static_get_value) {
+                    void* et = x_class_from_type(p2);
+                    if (et && x_class_get_fields && x_field_get_name) {
+                        void* it2 = NULL;
+                        void* ef;
+                        int k2 = 0;
+                        while ((ef = x_class_get_fields(et, &it2)) != NULL && k2 < 80) {
+                            const char* efn = x_field_get_name(ef);
+                            if (efn) {
+                                int64_t ev = 0;
+                                x_field_static_get_value(ef, &ev);
+                                LOGI("ENUM %s=%lld", efn, (long long)ev);
+                            }
+                            k2++;
+                        }
+                    }
+                }
                 if (t0 && strstr(t0, "String") && t2 && strstr(t2, "AttrType")) g_m_change_attr_name = m;
                 if (t0 && strstr(t0, "AttrSlot")) g_m_change_attr_slot = m;
                 found++;
             }
             LOGI("changeAttr name=%p slot=%p", g_m_change_attr_name, g_m_change_attr_slot);
+        }
+        void* epx = class_of(g_image, "BattleEntityProxy");
+        if (epx && x_class_get_methods && x_method_get_name && x_method_get_param_count &&
+            x_method_get_param && x_type_get_name) {
+            void* it = NULL;
+            void* m;
+            int n = 0;
+            while ((m = x_class_get_methods(epx, &it)) != NULL && n < 90) {
+                const char* mn = x_method_get_name(m);
+                if (mn && (strcmp(mn, "GetEntity") == 0 || strcmp(mn, "GetHeroEntityByBaseId") == 0 ||
+                           strcmp(mn, "GetHeroListByGroupIndex") == 0 ||
+                           strcmp(mn, "GetEntityListByGroupIndex") == 0)) {
+                    uint32_t pc = x_method_get_param_count(m);
+                    char sig[128];
+                    sig[0] = 0;
+                    for (uint32_t p = 0; p < pc && p < 4; p++) {
+                        void* pt = x_method_get_param(m, p);
+                        const char* tn = pt ? x_type_get_name(pt) : NULL;
+                        strncat(sig, tn ? tn : "?", sizeof(sig) - strlen(sig) - 1);
+                        if (p + 1 < pc) strncat(sig, ",", sizeof(sig) - strlen(sig) - 1);
+                    }
+                    LOGI("EPX %s(%s)", mn, sig);
+                }
+                n++;
+            }
         }
         LOGI("tgt done");
     }
